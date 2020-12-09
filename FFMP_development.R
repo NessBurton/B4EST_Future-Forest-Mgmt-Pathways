@@ -56,15 +56,39 @@ head(dfPerformance)
 ### convert to raster ---------------------------------------------------------------------------------
 
 # if locations are a regular grid
-#rstHeightLocal <- rasterFromXYZ(dfPerformance[, c('CenterLong', 'CenterLat', 'PrHeightLocal')])
+rstHeightLocal <- rasterFromXYZ(dfPerformance[, c('CenterLong', 'CenterLat', 'PrHeightLocal')])
 # Error in rasterFromXYZ(dfPerformance[, c("CenterLong", "CenterLat", "PrHeightLocal")]) : x cell sizes are not regular
 
-# if not, set extent and use rasterize
-extent(shpSZ)
-x <- raster(xmn=-76025, xmx=622975, ymn=6448975, ymx=7601975, res=1, crs="+proj=utm +zone=33 +datum=WGS84")
-rstHeightLocal <- rasterize(dfPerformance[, c('CenterLong', 'CenterLat')], x, dfPerformance[, 'PrHeightLocal'], fun=mean) # set different function - max? modal?
+# if not, use rasterise
+# means we need to convert the points to regularly gridded data, which will require averaging or some sort of function
+# create a spatialpoints dataframe
+spPerformance <- dfPerformance
+coordinates(spPerformance) <- ~ CenterLong + CenterLat
+# set crs - assume lat long
 
-plot(rstHeight)
+
+proj4string(spPerformance) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+crs(spPerformance)
+extent(spPerformance)
+plot(spPerformance)
+
+# explore coords
+sfPerformance <- st_as_sf(spPerformance)
+
+# create an empty raster object to the extent of the points and resolution
+# note, resolution should be 1km
+# because spPerformance has lat/long coords it is complicated... need to think more
+rst <- raster(crs = crs(spPerformance), resolution = c(0.1,0.1), ext = extent(spPerformance))
+res(rst)
+plot(rst)
+
+# rasterise
+rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$GridAlt)
+# needs thought on the functio used in rasterise (currently default = 'last')
+# could use mean/max/modal etc.
+# adds more uncertainty!
+plot(rstHeightLocal)
+res(rstHeightLocal)
 
 
 ### test getting summary stats per seed zone ----------------------------------------------------------
