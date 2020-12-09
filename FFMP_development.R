@@ -20,7 +20,7 @@ library(ggplot2)
 
 # seed zones for Sweden sent by Mats Berlin, Skogforsk
 # Alt 0246 for umlaut over o (if Num Lock available) - otherwise copy paste
-shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Kartdata/Shapefiler/Frözoner_Norge.shp"))
+shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shapefiler/Frözoner_Norge.shp"))
 
 head(shpSZ)
 crs(shpSZ)
@@ -29,10 +29,10 @@ ggplot(shpSZ)+
   geom_sf(aes(fill=Zon))
 # this is norway...
 
-rstSZ <- raster(paste0(dirData,"Seed_zones_SP_Sweden/Kartdata/Raster/Frozoner_utm33.tif"))
+rstSZ <- raster(paste0(dirData,"Seed_zones_SP_Sweden/Raster/Frozoner_utm33.tif"))
 crs(rstSZ)
 plot(rstSZ)
-# yup definitely norway
+# yup definitely both of norway
 
 
 ### filter to 6 northern seed zones and simplify? -----------------------------------------------------
@@ -48,9 +48,10 @@ shpSZ %>%
 
 ### explore csv data (height, survival, performance) --------------------------------------------------
 
-# e.g.
+# data from Henrik Hallingback, Skogforsk
 dfPerformance <- read.csv(paste0(dirData,"Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
 head(dfPerformance)
+# note. explanations of the variables in .txt file
 
 ### convert to raster ---------------------------------------------------------------------------------
 
