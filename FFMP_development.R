@@ -4,7 +4,8 @@
 # description: script to test the development of Future Forest Mangement Pathways (FFMPs) using
 # data provided by Skogforsk.
 
-wd <- "~/R/FFMPs"
+wd <- "~/R/FFMPs" # laptop
+wd <- "~/FFMPs" # sandbox
 dirData <- paste0(wd,"/data-raw/")
 dirOut <- paste0(wd,"/data-processed/")
 
