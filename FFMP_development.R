@@ -48,18 +48,19 @@ shpSZ %>%
 ### explore csv data (height, survival, performance) --------------------------------------------------
 
 # e.g.
-dfHeight <- read.csv()
-
+dfPerformance <- read.csv(paste0(dirData,"Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+head(dfPerformance)
 
 ### convert to raster ---------------------------------------------------------------------------------
 
 # if locations are a regular grid
-rstHeight <- rasterFromXYZ(dfHeight[, c('lon', 'lat', 'height')])
+#rstHeightLocal <- rasterFromXYZ(dfPerformance[, c('CenterLong', 'CenterLat', 'PrHeightLocal')])
+# Error in rasterFromXYZ(dfPerformance[, c("CenterLong", "CenterLat", "PrHeightLocal")]) : x cell sizes are not regular
 
 # if not, set extent and use rasterize
 extent(shpSZ)
 x <- raster(xmn=-76025, xmx=622975, ymn=6448975, ymx=7601975, res=1, crs="+proj=utm +zone=33 +datum=WGS84")
-rstHeight <- rasterize(dfHeight[, c('lon', 'lat')], x, temp[, 'height'], fun=mean) # set different function - max? modal?
+rstHeightLocal <- rasterize(dfPerformance[, c('CenterLong', 'CenterLat')], x, dfPerformance[, 'PrHeightLocal'], fun=mean) # set different function - max? modal?
 
 plot(rstHeight)
 
