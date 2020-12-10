@@ -6,6 +6,8 @@
 # ignore data-raw folder
 data-raw/
 
+.Rhistory
+
 # Node artifact files
 node_modules/
 dist/
@@ -52,3 +54,4 @@ Thumbs.db
 *.wmv
 
 .Rproj.user
+
