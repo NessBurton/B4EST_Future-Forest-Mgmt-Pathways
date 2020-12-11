@@ -3,8 +3,9 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
-# ignore data-raw folder
+# ignore data folders
 data-raw/
+data-processed/
 
 .Rhistory
 
