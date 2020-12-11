@@ -41,10 +41,6 @@ shpSZ %>%
 
 crs(shpSZ) # utm
 
-# work with smaller area to speed things up
-shpSZ <- shpSZ %>% 
-  filter(ZON2 %in% zones == T)
-
 
 ### explore csv data (height, survival, performance) --------------------------------------------------
 
@@ -70,31 +66,43 @@ crs(spPerformance)
 extent(spPerformance)
 #plot(spPerformance)
 
-# transform to utm
-utm <- crs(shpSZ)
-spPerformance <- spTransform(spPerformance, CRSobj = utm)
-plot(spPerformance)
-crs(spPerformance)
-
+# Method 1 (not using as it leaves data gaps)
+# transform points to utm
+#utm <- crs(shpSZ)
+#spPerformance <- spTransform(spPerformance, CRSobj = utm)
+#plot(spPerformance)
+#crs(spPerformance)
 # create an empty raster object to the extent of the points and resolution
 # note, resolution should be 1km - so assuming 1000m res ok using utm projection
-rst <- raster(crs = crs(spPerformance), resolution = c(1000,1000), ext = extent(shpSZ))
-res(rst)
-
+#rst <- raster(crs = crs(spPerformance), resolution = c(1000,1000), ext = extent(spPerformance))
+#res(rst)
 # rasterise
-head(spPerformance)
-rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal, fun=max)
+#head(spPerformance)
+#rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal, fun=max)
 # needs thought on the function used in rasterise (currently default = 'last')
 # could use mean/max/modal etc.
 # adds more uncertainty!
-plot(rstHeightLocal)
-summary(rstHeightLocal)
+#plot(rstHeightLocal)
+#summary(rstHeightLocal)
 # some gaps in the data - because of irregular grid?
-res(rstHeightLocal)
+#res(rstHeightLocal)
 # requires interpolation to remove gaps
 # can we get around this a different way?
-# ask Maurizio for advice
+# i think i've solved using method 2 below
 
+# Method 2
+# empty raster of correct extent and resolution
+rst <- raster(crs = crs(spPerformance), resolution = c(0.1,0.1), ext = extent(spPerformance))
+res(rst)
+# rasterise while still lat long
+rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal, fun=max)
+crs(rstHeightLocal)
+plot(rstHeightLocal)
+# now transform to utm, reprojection involves interpolation - default is bilinear
+utm <- crs(shpSZ)
+rstHeightLocal <- projectRaster(rstHeightLocal, crs = utm, res = 1000)
+plot(rstHeightLocal)
+res(rstHeightLocal)
 
 ### test getting summary stats per seed zone ----------------------------------------------------------
 
@@ -102,6 +110,10 @@ res(rstHeightLocal)
 plot(rstHeightLocal)
 plot(shpSZ, add=TRUE)
 # seed zones don't cover entire prediction area but that's ok...
+
+# work with just 6 northernmost zones
+shpSZ <- shpSZ %>% 
+  filter(ZON2 %in% zones == T)
 
 # dissolve/merge zones by ZON2 to simplify
 shpSZ_sf <- st_as_sf(shpSZ)
@@ -116,6 +128,8 @@ plot(shpSZ_sf)
 shpSZ_sp <- as_Spatial(shpSZ_sf)
 plot(shpSZ_sp)
 
+plot(rstHeightLocal);plot(shpSZ_sp,add=TRUE)
+
 # data frame of mean predicted height per seed zone
 dfSeedZones <- extract(rstHeightLocal, shpSZ_sp, fun=mean, df=TRUE, na.rm=TRUE)
 # needs some discussion as to which summary stat is most appropriate.
@@ -126,7 +140,7 @@ dfSeedZones <- extract(rstHeightLocal, shpSZ_sp, fun=mean, df=TRUE, na.rm=TRUE)
 ### loop to do this for several scenarios -------------------------------------------------------------
 
 # just focus on RCP8.5 (all GCMs) compared to present
-# and just one variable PrProdidxSOh60
+# and just one variable PrProdidxSOh66
 
 # list production prediction files
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -137,42 +151,62 @@ rcp85_files <- grep("85in50|Refclimate", files, value=TRUE)
 # for reprojection in loop
 utm <- crs(shpSZ)
 # empty data frame to store results
-df_results <- data.frame(shpSZ_sp$ZON2)
+df_results <- data.frame(rep(shpSZ_sp$ZON2,3))
+colnames(df_results)[1] <- "Zone"
+df_results$stat <- c(rep("Pmin",6),rep("Pmean",6),rep("Pmax",6))
 # scenario list
 scenario_list <- c()
 
 for (i in rcp85_files){
   
-  #i <- rcp85_files[7]
+  #i <- rcp85_files[1]
   
   scenario <- substring(i,75,89)
   scenario_list[[length(scenario_list) + 1]] <- scenario
   
+  print(paste0("Processing for scenario = ", scenario))
+  
   dfP <- read.csv(i)
+  
   # convert to spatial
   coordinates(dfP) <- ~ CenterLong + CenterLat
   # define lat long crs
   proj4string(dfP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-  #crs(dfP)
-  #extent(dfP)
-  # transform to utm
-  dfP <- spTransform(dfP, CRSobj = utm)
   
-  rstP <- rasterize(dfP, rst, dfP$PrProdidxSOh60, fun=max)
+  print(paste0("Converted to spatial points"))
   
-  values <- extract(rstP, shpSZ_sp, fun=mean, na.rm=TRUE)
+  # rasterise while still lat long
+  rstP <- rasterize(dfP, rst, dfP$PrProdidxSOh66, fun=max) # unsure of use of max function here
   
-  df_results <- cbind(df_results, values)
+  print(paste0("Rasterised (lat/long)"))
+  
+  # now transform to utm, reprojection involves interpolation - default is bilinear
+  rstP <- projectRaster(rstP, crs = utm, res = 1000)
+  writeRaster(rstP, paste0(dirOut,"PrProdidxSOh66_",scenario,".tif"),overwrite=TRUE)
+  print(paste0("Raster transformed to UTM and written to .tif"))
+  
+  print(paste0("Extracting values"))
+  
+  Pmin <- extract(rstP, shpSZ_sp, fun=min, na.rm=TRUE)
+  Pmean <- extract(rstP, shpSZ_sp, fun=mean, na.rm=TRUE)
+  Pmax <- extract(rstP, shpSZ_sp, fun =max, na.rm=TRUE)
+  
+  print(paste0("Min, Mean, Max extracted"))
+  
+  Pvalues <- rbind(Pmin,Pmean,Pmax)
+  df_results <- cbind(df_results, Pvalues)
+  
+  print(paste0("Added to data frame"))
   
 }
 
-colnames(df_results)[2:8] <- scenario_list
+colnames(df_results)[3:9] <- scenario_list
 
 df_results_lng <- df_results %>% 
-  pivot_longer(cols = 2:7, names_to="scenario",values_to="performance")
+  pivot_longer(cols = 3:8, names_to="scenario",values_to="performance")
 
 df_results_lng <- df_results_lng %>% 
-  mutate(diff = performance - Refclimate_SO1.)
+  mutate(change = (performance - Refclimate_SO1.)/Refclimate_SO1. * 100)
 
 ### test visualisation --------------------------------------------------------------------------------
 # potential to use this package https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/traffic-light-plots.html
