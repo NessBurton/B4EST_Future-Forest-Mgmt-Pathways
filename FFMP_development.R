@@ -206,12 +206,45 @@ df_results_lng <- df_results %>%
   pivot_longer(cols = 3:8, names_to="scenario",values_to="performance")
 
 df_results_lng <- df_results_lng %>% 
-  mutate(change = (performance - Refclimate_SO1.)/Refclimate_SO1. * 100)
+  mutate(percChange = (performance - Refclimate_SO1.)/Refclimate_SO1. * 100)
+
+summary(df_results_lng$percChange)
+
+df_results_lng$change <- NA
+df_results_lng$change[which(df_results_lng$percChange<0)] <- "Small decline"
+df_results_lng$change[which(df_results_lng$percChange>0 
+                            & df_results_lng$percChange<5)] <- "Small increase"
+df_results_lng$change[which(df_results_lng$percChange>=5 
+                            & df_results_lng$percChange<10)] <- "Increase"
+df_results_lng$change[which(df_results_lng$percChange>=10)] <- "Large increase"
 
 ### test visualisation --------------------------------------------------------------------------------
+
 # potential to use this package https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/traffic-light-plots.html
+#install.packages("robvis")
+#library(robvis)
+#rob_traffic_light(data = data_rob2, tool = "ROB2")
 
-install.packages("robvis")
-library(robvis)
+df <- df_results_lng
+df$Zone <- factor(df$Zone, levels = zones)
+df$change <- factor(df$change, levels = c("Small decline","Small increase","Increase","Large increase"))
 
-rob_traffic_light(data = data_rob2, tool = "ROB2")
+# colour scale
+library(RColorBrewer)
+display.brewer.all()
+changeCols <- brewer.pal(4,"RdYlGn")
+names(changeCols) <- levels(df$change)
+colScale <- scale_colour_manual(name = "change",values = changeCols)
+
+df %>% 
+  #filter(stat=="Pmin") %>% 
+  ggplot()+
+  geom_point(aes(scenario,Zone,size=percChange,col=change))+
+  facet_wrap(~stat)+
+  colScale
+
+df %>% 
+  ggplot()+
+  geom_boxplot(aes(Zone,percChange))+ coord_flip()+
+  facet_wrap(~scenario)+
+  geom_vline(xintercept = 0)
