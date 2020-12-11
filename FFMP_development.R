@@ -135,12 +135,13 @@ dfSeedZones <- extract(rstHeightLocal, shpSZ_sp, fun=mean, df=TRUE, na.rm=TRUE)
 # needs some discussion as to which summary stat is most appropriate.
 # perhaps useful to have min, max, and mean to compare?
 # then set thresholds based on these values
+sdSeedZones <- extract(rstHeightLocal,shpSZ_sp,fun=sd,df=TRUE,na.rm=TRUE)
 
 
-### loop to do this for several scenarios -------------------------------------------------------------
+### loop to do this for all GCMs -------------------------------------------------------------
 
 # just focus on RCP8.5 (all GCMs) compared to present
-# and just one variable PrProdidxSOh66
+
 
 # list production prediction files
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -150,23 +151,26 @@ rcp85_files <- grep("85in50|Refclimate", files, value=TRUE)
 
 # for reprojection in loop
 utm <- crs(shpSZ)
+
 # empty data frame to store results
-df_results <- data.frame(rep(shpSZ_sp$ZON2,3))
-colnames(df_results)[1] <- "Zone"
-df_results$stat <- c(rep("Pmin",6),rep("Pmean",6),rep("Pmax",6))
+#df_results <- data.frame(rep(shpSZ_sp$ZON2,4))
+#colnames(df_results)[1] <- "Zone"
+#df_results$stat <- c(rep("Pmin",6),rep("Pmean",6),rep("Pmax",6),rep("Psd",6))
+
 # scenario list
 scenario_list <- c()
 
-for (i in rcp85_files){
+
+for (f in rcp85_files){
   
-  #i <- rcp85_files[1]
+  #f <- rcp85_files[1]
   
-  scenario <- substring(i,75,89)
+  scenario <- substring(f,75,89)
   scenario_list[[length(scenario_list) + 1]] <- scenario
   
   print(paste0("Processing for scenario = ", scenario))
   
-  dfP <- read.csv(i)
+  dfP <- read.csv(f)
   
   # convert to spatial
   coordinates(dfP) <- ~ CenterLong + CenterLat
@@ -175,32 +179,69 @@ for (i in rcp85_files){
   
   print(paste0("Converted to spatial points"))
   
-  # rasterise while still lat long
-  rstP <- rasterize(dfP, rst, dfP$PrProdidxSOh66, fun=max) # unsure of use of max function here
+  print(paste0("Loop through seed orchard performance and rasterise"))
   
-  print(paste0("Rasterised (lat/long)"))
+  # empty raster stack for each scenario
+  rstStack <- stack()
   
-  # now transform to utm, reprojection involves interpolation - default is bilinear
-  rstP <- projectRaster(rstP, crs = utm, res = 1000)
-  writeRaster(rstP, paste0(dirOut,"PrProdidxSOh66_",scenario,".tif"),overwrite=TRUE)
-  print(paste0("Raster transformed to UTM and written to .tif"))
+  for (var in names(dfP)[17:20]){ # rasterise performance for 4 seed orchards
+    
+    #var <- names(dfP)[17]
+    
+    # rasterise while still lat long
+    rstP <- rasterize(dfP, rst, dfP[[var]], fun=max) # unsure of use of max function here
+    
+    print(paste0("Rasterised (lat/long) for var: ", var))
+    
+    # now transform to utm, reprojection involves interpolation - default is bilinear
+    rstP <- projectRaster(rstP, crs = utm, res = 1000)
+    rstStack <- addLayer(rstStack, rstP)
+    
+    #writeRaster(rstP, paste0(dirOut,var,"_",scenario,".tif"),overwrite=TRUE)
+    
+    #print(paste0("Raster transformed to UTM and written to .tif for var: ",var))
+    
+    #print(paste0("Extracting values for var: ",var))
+    
+    #Pmin <- extract(rstP, shpSZ_sp, fun=min, na.rm=TRUE)
+    #Pmean <- extract(rstP, shpSZ_sp, fun=mean, na.rm=TRUE)
+    #Pmax <- extract(rstP, shpSZ_sp, fun=max, na.rm=TRUE)
+    #Psd <- extract(rstP, shpSZ_sp, fun=sd, na.rm=TRUE)
+    
+    #print(paste0("Min, Mean, Max extracted for var: ",var))
+    
+    #Pvalues <- rbind(Pmin,Pmean,Pmax,Psd)
+    #df_results <- cbind(df_results, Pvalues)
+    
+    #print(paste0("Var ",var," added to data frame"))
+    
+  }
   
-  print(paste0("Extracting values"))
-  
-  Pmin <- extract(rstP, shpSZ_sp, fun=min, na.rm=TRUE)
-  Pmean <- extract(rstP, shpSZ_sp, fun=mean, na.rm=TRUE)
-  Pmax <- extract(rstP, shpSZ_sp, fun =max, na.rm=TRUE)
-  
-  print(paste0("Min, Mean, Max extracted"))
-  
-  Pvalues <- rbind(Pmin,Pmean,Pmax)
-  df_results <- cbind(df_results, Pvalues)
-  
-  print(paste0("Added to data frame"))
+  #colnames(df_results)[3:9] <- scenario_list
+  #write.csv(df_results, paste0(dirOut,"df_SO_performance_RCP85.csv"))
+  names(rstStack) <- names(dfP)[17:20]
+  writeRaster(rstStack, paste0(dirOut, "SO_performance_",scenario,".tif"), overwrite=TRUE)
   
 }
 
-colnames(df_results)[3:9] <- scenario_list
+# check
+GCM_bc <- stack(paste0(dirOut,"SO_performance_bc85in50_SO1.5g.tif"))
+names(GCM_bc)
+spplot(GCM_bc)
+
+# to do:
+# a second loop or apply to extract values from each SO stack
+
+#write.csv(df_results, paste0(dirOut,"df_performance_PrProdidxSOh66.csv"))
+#write.csv(df_results, paste0(dirOut,"df_performance_PrProdidxSOh60.csv"))
+
+SOh66 <- read.csv(paste0(dirOut,"df_performance_PrProdidxSOh66.csv"))
+SOh66$seedOrchard <- "SOh66"
+SOh60 <- read.csv(paste0(dirOut,"df_performance_PrProdidxSOh60.csv"))
+SOh60$seedOrchard <- "SOh60"
+
+df_results <- rbind(SOh66,SOh60)
+df_results$X <- NULL
 
 df_results_lng <- df_results %>% 
   pivot_longer(cols = 3:8, names_to="scenario",values_to="performance")
@@ -213,10 +254,10 @@ summary(df_results_lng$percChange)
 df_results_lng$change <- NA
 df_results_lng$change[which(df_results_lng$percChange<0)] <- "Small decline"
 df_results_lng$change[which(df_results_lng$percChange>0 
-                            & df_results_lng$percChange<5)] <- "Small increase"
-df_results_lng$change[which(df_results_lng$percChange>=5 
-                            & df_results_lng$percChange<10)] <- "Increase"
-df_results_lng$change[which(df_results_lng$percChange>=10)] <- "Large increase"
+                            & df_results_lng$percChange<=5)] <- "Small increase"
+df_results_lng$change[which(df_results_lng$percChange>5 
+                            & df_results_lng$percChange<=20)] <- "Increase"
+df_results_lng$change[which(df_results_lng$percChange>20)] <- "Large increase"
 
 ### test visualisation --------------------------------------------------------------------------------
 
@@ -236,15 +277,51 @@ changeCols <- brewer.pal(4,"RdYlGn")
 names(changeCols) <- levels(df$change)
 colScale <- scale_colour_manual(name = "change",values = changeCols)
 
+df$dummyX <- "x"
+
+df <- left_join(df,dfElev,by="Zone")
+
 df %>% 
-  #filter(stat=="Pmin") %>% 
+  filter(stat=="Pmin") %>% 
   ggplot()+
-  geom_point(aes(scenario,Zone,size=percChange,col=change))+
-  facet_wrap(~stat)+
-  colScale
+  geom_point(aes(seedOrchard,dummyX,size=percChange,col=change))+ coord_flip()+
+  #facet_wrap(~Zone, nrow = 7)+
+  facet_grid(desc~scenario)+
+  colScale +
+  ylab("Seed orchard choice")+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
 
 df %>% 
   ggplot()+
-  geom_boxplot(aes(Zone,percChange))+ coord_flip()+
-  facet_wrap(~scenario)+
+  geom_boxplot(aes(seedOrchard,percChange))+ coord_flip()+
+  facet_grid(Zone~scenario)+
   geom_vline(xintercept = 0)
+
+# aim for facet_wrap(Zone~scenario)
+# with x aes replaced by seed orchard
+
+### get elevation per zone to define -------------------------------------------
+
+rstElev <- rasterize(spPerformance, rst, spPerformance$GridAlt, fun=max)
+crs(rstElev)
+plot(rstElev)
+# now transform to utm, reprojection involves interpolation - default is bilinear
+utm <- crs(shpSZ)
+rstElev <- projectRaster(rstElev, crs = utm, res = 1000)
+plot(rstElev)
+dfElev <- extract(rstElev, shpSZ_sp, fun=max, df=TRUE, na.rm=TRUE)
+dfElev$Zone <- shpSZ_sp$ZON2
+
+ggplot(shpSZ_sf)+
+  geom_sf(aes(fill=ZON2))
+
+dfElev$elev <- rep(c("Upland","Lowland"),3)
+dfElev$location <- c("North","North","Central","Central","South","South")          
+dfElev$desc <- paste0(dfElev$location,"-",dfElev$elev)
+
+colnames(shpSZ_sf)[1] <- "Zone"
+shpSZ_sf <- left_join(shpSZ_sf,dfElev,by="Zone")
+ggplot(shpSZ_sf)+
+  geom_sf(aes(fill=desc))
