@@ -250,7 +250,7 @@ for (f in rcp85_files){
 }
 
 # check
-check <- stack(paste0(dirOut,"SO_performance_bc85in50_SO1.5g.tif"))
+check <- stack(paste0(dirOut,"SO_performance_no85in50.tif"))
 names(check)
 spplot(check)
 
