@@ -80,6 +80,8 @@ dfElev$location <- c("67°N","67°N","66°N","66°N","64°N","64°N")
 dfElev$desc <- paste0(dfElev$location,"-",dfElev$elev)
 dfElev$desc <- factor(dfElev$desc, levels=c("67°N-Upland","67°N-Lowland","66°N-Upland","66°N-Lowland","64°N-Upland", "64°N-Lowland"))
 
+write.csv(dfElev, paste0(dirOut,"seed_zone_descriptions.csv"),row.names = F)
+
 colnames(shpSZ_sf)[1] <- "Zone"
 shpSZ_sf <- left_join(shpSZ_sf,dfElev,by="Zone")
 ggplot(shpSZ_sf)+
