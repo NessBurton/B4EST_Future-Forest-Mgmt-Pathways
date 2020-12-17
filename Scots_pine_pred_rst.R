@@ -24,6 +24,12 @@ head(mean45in50)
 mean85in50 <- read.csv(paste0(dirData,"Productionpredictions/MEAN85in50_SO1.5g_predictions.csv"))
 head(mean85in50)
 
+# apply thresholds (remove data where production below 1 and survival below 0.5)
+mean45in50$PrProdidxSOh60[which(mean45in50$PrProdidxSOh60<1)]<-NA
+mean45in50$PrProdidxSOh60[which(mean45in50$PrSurvSOh60<0.5)]<-NA
+mean85in50$PrProdidxSOh60[which(mean85in50$PrProdidxSOh60<1)]<-NA
+mean85in50$PrProdidxSOh60[which(mean85in50$PrSurvSOh60<0.5)]<-NA
+
 ### convert to raster ----------------------------------------------------------
 
 # RCP4.5
@@ -43,9 +49,8 @@ plot(prodIdxSOh60_45)
 # now transform to utm, reprojection involves interpolation - default is bilinear
 shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
 utm <- crs(shpSZ)
-#prodIdxSOh60 <- projectRaster(prodIdxSOh60, crs = utm, res = 1000)
-#plot(rstHeightLocal)
-#res(rstHeightLocal)
+prodIdxSOh60_45 <- projectRaster(prodIdxSOh60_45, crs = utm, res = 1000)
+plot(prodIdxSOh60_45)
 
 # RCP8.5
 # convert to spatial points
@@ -58,6 +63,9 @@ extent(mean85in50)
 prodIdxSOh60_85 <- rasterize(mean85in50, rst, mean85in50$PrProdidxSOh60, fun=max)
 crs(prodIdxSOh60_85)
 plot(prodIdxSOh60_85)
+# transform to utm
+prodIdxSOh60_85 <- projectRaster(prodIdxSOh60_85, crs = utm, res = 1000)
+plot(prodIdxSOh60_85)
 
 ### test uncertainty map -------------------------------------------------------
 
@@ -67,11 +75,15 @@ plot(prodIdxSOh60_85)
 
 diff <- prodIdxSOh60_85 - prodIdxSOh60_45
 plot(diff)
-mean <- mean(prodIdxSOh60_45,prodIdxSOh60_85)
-plot(mean)
+avg <- mean(prodIdxSOh60_45,prodIdxSOh60_85)
+plot(avg)
 
-uncertainty <- diff/mean * 100
+uncertainty <- diff/avg * 100
 plot(uncertainty)
+
+fig1 <- stack(prodIdxSOh60_45,prodIdxSOh60_85,avg,uncertainty)
+names(fig1) <- c("RCP4.5","RCP8.5","Mean","Uncertainty")
+plot(fig1)
 
 ### rasterise in loop ----------------------------------------------------------
 
