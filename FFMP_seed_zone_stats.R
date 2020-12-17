@@ -31,6 +31,20 @@ proj4string(sp_ref) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
 rst <- raster(crs = crs(sp_ref), resolution = c(0.1,0.1), ext = extent(sp_ref))
 res(rst)
 
+# use different method (rows and cols not res=0.1)
+# https://stackoverflow.com/questions/9542039/resolution-values-for-rasters-in-r
+# convert points to UTM
+#sp_ref <- spTransform(sp_ref,CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m"))
+#crs(sp_ref)
+#extent(sp_ref)
+# extent object rounded to km
+#ext <- extent(269181,918981,6134232,7670241)
+# how many rows and cols?
+#length(2691:918) #ncol
+#length(6134:7670) #nrow
+#rst2 <- raster(ext, crs = crs(sp_ref), ncol=1774, nrow=1537)
+#rst2
+
 ### seed zones -----------------------------------------------------------------
 
 # seed zones for Sweden sent by Mats
@@ -90,7 +104,7 @@ ggplot(shpSZ_sf)+
 ### read in Scots pine predictions and join to zones ---------------------------
 
 # need to convert reference data to correct format for use in loop
-# (will use to calculate percentage change from current predictions)
+# will use unimproved provenance under reference climate to calculate future change
 # transform to utm
 sp_ref <- spTransform(sp_ref, CRSobj = utm )
 # convert to sf
@@ -103,10 +117,14 @@ sf_ref$Zone <- factor(sf_ref$Zone)
 sf_ref$desc <- factor(sf_ref$desc)
 summary(sf_ref$Zone)
 
+head(sf_ref)
+crs(sf_ref)
+
 sf_ref <- sf_ref[,c(15:18,25)] %>% 
   filter(!is.na(desc)) %>% # filter to just zones
   st_drop_geometry() %>%
   pivot_longer(1:4, names_to="seed_orchard",values_to="prod_idx")
+sf_ref$prod_idx <- sf_ref$prod_idx * 100 # convert from decimal to percentage
 colnames(sf_ref)[3] <- "ref_prod_idx"
 rm(df_ref)
 
@@ -125,7 +143,7 @@ scenario_list <- c()
 
 for (f in files){
   
-  #f <- rcp85_files[1]
+  #f <- files[1]
   
   scenario <- substring(f,75,82)
   scenario_list[[length(scenario_list) + 1]] <- scenario
@@ -147,20 +165,25 @@ for (f in files){
   dfP_sf$desc <- factor(dfP_sf$desc)
   #summary(dfP_sf$ZON2)
   
+  #head(dfP_sf)
+  
   print("Transform to long format")
-  df_long <- dfP_sf[,c(17:20,27)] %>% 
+  df_long <- dfP_sf[,c(17:20,39)] %>% 
     filter(!is.na(desc)) %>% # filter to just zones
     st_drop_geometry() %>%
     pivot_longer(1:4, names_to="seed_orchard",values_to="prod_idx")
+  df_long$prod_idx <- df_long$prod_idx * 100
   
   print("Add reference production")
   # add ref production
   df_long <- cbind(df_long,sf_ref$ref_prod_idx)
   colnames(df_long)[4] <- "ref_prod"
   
-  print("Calculate percentage change")
+  print("Calculate change")
   df_long <- df_long %>% 
-    mutate(perc_change = (prod_idx - ref_prod)/ref_prod * 100)
+    mutate(change = prod_idx - ref_prod,
+           #perc_change = (prod_idx - ref_prod)/ref_prod * 100)
+    )
   df_long$scenario <- scenario
   
   print("Add to results table")
@@ -180,28 +203,33 @@ for (f in files){
   
 }
 
+# at mg45 gcm get this error when adding reference production:
+# Error in data.frame(..., check.names = FALSE) : 
+# arguments imply differing number of rows: 1792768, 409076
+# because
+
 head(df_results_lng)
 df_results_lng$change <- NA
-df_results_lng$change[which(df_results_lng$perc_change<0)]<-"decline"
-df_results_lng$change[which(df_results_lng$perc_change>0)] <- "increase"
+df_results_lng$change[which(df_results_lng$change<0)]<-"decline"
+df_results_lng$change[which(df_results_lng$change>0)] <- "increase"
 
 df_results_lng$seed.orchard <- substring(df_results_lng$seed_orchard,10,14)
 
 head(df_results_lng)
 
-#write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp45_long.csv"), row.names = F)
-#write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp45_summary.csv"), row.names = F)
+write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp45_long.csv"), row.names = F)
+write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp45_summary.csv"), row.names = F)
 #write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp85_long.csv"), row.names = F)
 #write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp85_summary.csv"), row.names = F)
 
 #brewer.pal(n = 8, name = "Dark2")
 pal <- c("#D95F02","#1B9E77")
 #png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85_perGCM.png"), width = 900, height = 800)
-png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45_perGCM.png"), width = 900, height = 800)
+#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45_perGCM.png"), width = 900, height = 800)
 df_results_lng %>% 
   filter(scenario != "MEAN45in") %>% 
   ggplot()+
-  geom_boxplot(aes(seed.orchard,perc_change,col=change))+coord_flip()+
+  geom_boxplot(aes(seed.orchard,change,col=change))+coord_flip()+
   #scale_color_brewer(palette = "Dark2")+
   scale_color_manual(values=pal)+  
   facet_grid(desc~scenario)+
