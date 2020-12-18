@@ -125,25 +125,58 @@ utm <- crs(shpSZ)
 
 names(dfRef)
 
-for (var in names(dfRef)[15:18]){ # rasterise performance for 4 seed orchards
+# list production prediction files per scenario
+files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
+# just RCP8.5 to test + current to compare
+files <- grep("MEAN", files, value=TRUE)
+
+for(f in files){
   
-  #var <- names(dfRef)[17]
+  #f <- files[1]
+  
+  scenario <- substring(f,75,84)
+  #scenario_list[[length(scenario_list) + 1]] <- scenario
+  
+  print("Read in data, convert to spatial")
+  dfP <- read.csv(f)
+  coordinates(dfP)<- ~ CenterLong + CenterLat
+  # set crs - assume lat long
+  proj4string(dfP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  for (var in names(dfP)[17:20]){ # rasterise performance for 4 seed orchards
+  
+  #var <- names(dfP_sf)[17]
   
   # rasterise while still lat long
-  rstP <- rasterize(dfRef, rst, dfRef[[var]], fun=max) # unsure of use of max function here
+  rstP <- rasterize(dfP, rst, dfP[[var]], fun=max) # unsure of use of max function here
   
   # now transform to utm, reprojection involves interpolation - default is bilinear
   rstP <- projectRaster(rstP, crs = utm, res = 1000)
   
   # write to tif
-  writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_Refclimate_thresholds.tif"))
+  writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,".tif"), overwrite=T)
+  
+}
   
 }
 
+
+
 # read in as stacks to compare
 
-rstlist <- list.files(path = paste0(dirOut,"ProdIdx_rst/"), pattern='.tif$', full.names=T)
+rstlist <- list.files(path = paste0(dirOut,"ProdIdx_rst/"), full.names=T)
+rstlist <- grep("MEAN|Refclimate.tif", rstlist, value=TRUE)
 rstlist
 prodIdx <- stack(rstlist)
 spplot(prodIdx)
 res(prodIdx)
+
+names(prodIdx)
+ordered_names <- c("PrProdidxSOh60_Refclimate","PrProdidxSOh60_MEAN45in50","PrProdidxSOh60_MEAN85in50",
+                   "PrProdidxSOh62_Refclimate","PrProdidxSOh62_MEAN45in50","PrProdidxSOh62_MEAN85in50",
+                   "PrProdidxSOh64_Refclimate","PrProdidxSOh64_MEAN45in50","PrProdidxSOh64_MEAN85in50",
+                   "PrProdidxSOh66_Refclimate","PrProdidxSOh66_MEAN45in50","PrProdidxSOh66_MEAN85in50")
+prodIdx <- prodIdx[[ordered_names]]
+spplot(prodIdx, layout=c(3,4))
+
+
