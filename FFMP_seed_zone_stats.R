@@ -168,7 +168,7 @@ for (f in files){
   #head(dfP_sf)
   
   print("Transform to long format")
-  df_long <- dfP_sf[,c(17:20,39)] %>% 
+  df_long <- dfP_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66","desc")] %>% 
     filter(!is.na(desc)) %>% # filter to just zones
     st_drop_geometry() %>%
     pivot_longer(1:4, names_to="seed_orchard",values_to="prod_idx")
@@ -181,7 +181,7 @@ for (f in files){
   
   print("Calculate change")
   df_long <- df_long %>% 
-    mutate(change = prod_idx - ref_prod,
+    mutate(perc.change = prod_idx - ref_prod,
            #perc_change = (prod_idx - ref_prod)/ref_prod * 100)
     )
   df_long$scenario <- scenario
@@ -203,49 +203,44 @@ for (f in files){
   
 }
 
-# at mg45 gcm get this error when adding reference production:
-# Error in data.frame(..., check.names = FALSE) : 
-# arguments imply differing number of rows: 1792768, 409076
-# because
-
 head(df_results_lng)
 df_results_lng$change <- NA
-df_results_lng$change[which(df_results_lng$change<0)]<-"decline"
-df_results_lng$change[which(df_results_lng$change>0)] <- "increase"
-
+df_results_lng$change[which(df_results_lng$perc.change<0)]<-"decline"
+df_results_lng$change[which(df_results_lng$perc.change>0)] <- "increase"
+unique(df_results_lng$change)
 df_results_lng$seed.orchard <- substring(df_results_lng$seed_orchard,10,14)
 
 head(df_results_lng)
 
-write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp45_long.csv"), row.names = F)
-write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp45_summary.csv"), row.names = F)
+#write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp45_long.csv"), row.names = F)
+#write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp45_summary.csv"), row.names = F)
 #write.csv(df_results_lng,paste0(dirOut,"prProdIdx_rcp85_long.csv"), row.names = F)
 #write.csv(df_results_summary,paste0(dirOut,"prProdIdx_rcp85_summary.csv"), row.names = F)
 
 #brewer.pal(n = 8, name = "Dark2")
 pal <- c("#D95F02","#1B9E77")
-#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85_perGCM.png"), width = 900, height = 800)
-#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45_perGCM.png"), width = 900, height = 800)
+#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85_perGCM.png"), units="cm", width = 20, height = 18, res=500)
+#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45_perGCM.png"), units="cm", width = 20, height = 18, res=500)
 df_results_lng %>% 
   filter(scenario != "MEAN45in") %>% 
   ggplot()+
-  geom_boxplot(aes(seed.orchard,change,col=change))+coord_flip()+
+  geom_boxplot(aes(seed.orchard,perc.change,col=change))+coord_flip()+
   #scale_color_brewer(palette = "Dark2")+
   scale_color_manual(values=pal)+  
   facet_grid(desc~scenario)+
   xlab("Seed orchard choice")+
-  ylab("Change in production index from baseline (%)")+
-  labs(col = "Change in production from baseline")+ 
+  ylab("Change in production index (% units) from baseline")+
+  labs(col = "Direction of change")+ 
   theme(legend.position="top")+
-  ylim(c(-10,100))
+  ylim(c(-10,40))
 dev.off()
 
-#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85.png"), width = 900, height = 800)
-png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45.png"), width = 900, height = 800)
+#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85.png"), units="cm", width = 20, height = 18, res=500)
+#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45.png"), units="cm", width = 20, height = 18, res=500)
 df_results_lng %>% 
   filter(scenario != "MEAN45in") %>% 
   ggplot()+
-  geom_boxplot(aes(seed.orchard,perc_change,col=change))+coord_flip()+
+  geom_boxplot(aes(seed.orchard,perc.change,col=change))+coord_flip()+
   scale_color_manual(values = pal)+
   facet_grid(rows="desc")+
   xlab("Seed orchard choice")+
