@@ -131,8 +131,8 @@ rm(df_ref)
 # list production prediction files per scenario
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
 # just RCP8.5 to test + current to compare
-#files <- grep("85in50", files, value=TRUE)
-files <- grep("45in50", files, value=TRUE)
+files <- grep("85in50", files, value=TRUE)
+#files <- grep("45in50", files, value=TRUE)
 files
 
 utm <- crs(shpSZ)
@@ -219,10 +219,11 @@ head(df_results_lng)
 
 #brewer.pal(n = 8, name = "Dark2")
 pal <- c("#D95F02","#1B9E77")
-#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85_perGCM.png"), units="cm", width = 20, height = 18, res=500)
+png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85_perGCM.png"), units="cm", width = 20, height = 18, res=500)
 #png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45_perGCM.png"), units="cm", width = 20, height = 18, res=500)
 df_results_lng %>% 
-  filter(scenario != "MEAN45in") %>% 
+  filter(scenario != "MEAN85in") %>% 
+  #filter(scenario != "MEAN45in") %>% 
   ggplot()+
   geom_boxplot(aes(seed.orchard,perc.change,col=change))+coord_flip()+
   #scale_color_brewer(palette = "Dark2")+
@@ -235,10 +236,11 @@ df_results_lng %>%
   ylim(c(-10,40))
 dev.off()
 
-#png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85.png"), units="cm", width = 20, height = 18, res=500)
+png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP85.png"), units="cm", width = 20, height = 18, res=500)
 #png(paste0(wd,"/figures/ProdIdx_change_frm_baseline_RCP45.png"), units="cm", width = 20, height = 18, res=500)
 df_results_lng %>% 
-  filter(scenario != "MEAN45in") %>% 
+  filter(scenario != "MEAN85in") %>% 
+  #filter(scenario != "MEAN45in") %>% 
   ggplot()+
   geom_boxplot(aes(seed.orchard,perc.change,col=change))+coord_flip()+
   scale_color_manual(values = pal)+
