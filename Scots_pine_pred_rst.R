@@ -135,10 +135,19 @@ for(f in files){
   #f <- files[1]
   
   scenario <- substring(f,75,84)
-  #scenario_list[[length(scenario_list) + 1]] <- scenario
   
-  print("Read in data, convert to spatial")
   dfP <- read.csv(f)
+  
+  # apply thresholds
+  dfP$PrProdidxSOh60[which(dfP$PrProdidxSOh60<1)]<-NA
+  dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<0.5)]<-NA
+  dfP$PrProdidxSOh62[which(dfP$PrProdidxSOh62<1)]<-NA
+  dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<0.5)]<-NA
+  dfP$PrProdidxSOh64[which(dfP$PrProdidxSOh64<1)]<-NA
+  dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64<0.5)]<-NA
+  dfP$PrProdidxSOh66[which(dfP$PrProdidxSOh66<1)]<-NA
+  dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66<0.5)]<-NA
+  
   coordinates(dfP)<- ~ CenterLong + CenterLat
   # set crs - assume lat long
   proj4string(dfP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
@@ -154,7 +163,7 @@ for(f in files){
   rstP <- projectRaster(rstP, crs = utm, res = 1000)
   
   # write to tif
-  writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,".tif"), overwrite=T)
+  writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,"_thresholds.tif"), overwrite=T)
   
 }
   
@@ -163,13 +172,49 @@ for(f in files){
 
 
 # read in as stacks to compare
+rstlist <- list.files(path = paste0(dirOut,"ProdIdx_rst/"), full.names=T)
+
+rcp45list <- grep("MEAN45in50", rstlist, value=TRUE)
+rcp85list <- grep("MEAN85in50", rstlist, value=TRUE)
+rcp45list2 <- grep("MEAN45in50_thresholds", rstlist, value=TRUE)
+rcp85list2 <- grep("MEAN85in50_thresholds", rstlist, value=TRUE)
+
+rcp45 <- stack(rcp45list)
+rcp85 <- stack(rcp85list)
+rcp45t <- stack(rcp45list2)
+rcp85t <- stack(rcp85list2)
+
+diff <- rcp85 - rcp45
+spplot(diff)
+avg <- stack(mean(rcp45[[1]],rcp85[[1]]),
+             mean(rcp45[[2]],rcp85[[2]]),
+             mean(rcp45[[3]],rcp85[[3]]),
+             mean(rcp45[[4]],rcp85[[4]]))
+spplot(avg)
+
+uncertainty <- diff/avg * 100
+spplot(uncertainty)
+
+
+diff2 <- rcp85t - rcp45t
+spplot(diff2)
+avg2 <- stack(mean(rcp45t[[1]],rcp85t[[1]]),
+             mean(rcp45t[[2]],rcp85t[[2]]),
+             mean(rcp45t[[3]],rcp85t[[3]]),
+             mean(rcp45t[[4]],rcp85t[[4]]))
+spplot(avg2)
+
+uncertainty2 <- diff2/avg2 * 100
+spplot(uncertainty2)
+
+writeRaster(uncertainty, paste0(dirOut,"ProdIdx_rst/uncertainty_RCPs.tif"), overwrite=T)
+writeRaster(uncertainty2, paste0(dirOut,"ProdIdx_rst/uncertainty_RCPs_thresholds.tif"), overwrite=T)
+
 
 rstlist <- list.files(path = paste0(dirOut,"ProdIdx_rst/"), full.names=T)
-rstlist <- grep("MEAN|Refclimate.tif", rstlist, value=TRUE)
-rstlist
-prodIdx <- stack(rstlist)
-spplot(prodIdx)
-res(prodIdx)
+plotlist <- grep("MEAN|Refclimate.tif", rstlist, value=TRUE)
+plotlist
+prodIdx <- stack(plotlist)
 
 names(prodIdx)
 ordered_names <- c("PrProdidxSOh60_Refclimate","PrProdidxSOh60_MEAN45in50","PrProdidxSOh60_MEAN85in50",
@@ -179,4 +224,70 @@ ordered_names <- c("PrProdidxSOh60_Refclimate","PrProdidxSOh60_MEAN45in50","PrPr
 prodIdx <- prodIdx[[ordered_names]]
 spplot(prodIdx, layout=c(3,4))
 
+names(uncertainty) <- c("SOh60_uncertainty",
+                        "SOh62_uncertainty",
+                        "SOh64_uncertainty",
+                        "SOh66_uncertainty")
+spplot(uncertainty, layout=c(1,4))
+
+#png(paste0(wd,"/figures/test.png"))
+#par(mfrow=c(1,2))
+library(gridExtra)
+grid.arrange(spplot(prodIdx, layout=c(3,4)),
+             spplot(uncertainty, layout=c(1,4)), ncol=2)
+#dev.off()
+
+rstlist <- list.files(path = paste0(dirOut,"ProdIdx_rst/"), full.names=T)
+plotlist2 <- grep("in50_thresholds|Refclimate_thresholds", rstlist, value=TRUE)
+plotlist2
+prodIdx2 <- stack(plotlist2)
+
+names(prodIdx2)
+ordered_names2 <- c("PrProdidxSOh60_Refclimate_thresholds","PrProdidxSOh60_MEAN45in50_thresholds","PrProdidxSOh60_MEAN85in50_thresholds",
+                   "PrProdidxSOh62_Refclimate_thresholds","PrProdidxSOh62_MEAN45in50_thresholds","PrProdidxSOh62_MEAN85in50_thresholds",
+                   "PrProdidxSOh64_Refclimate_thresholds","PrProdidxSOh64_MEAN45in50_thresholds","PrProdidxSOh64_MEAN85in50_thresholds",
+                   "PrProdidxSOh66_Refclimate_thresholds","PrProdidxSOh66_MEAN45in50_thresholds","PrProdidxSOh66_MEAN85in50_thresholds")
+prodIdx2 <- prodIdx2[[ordered_names2]]
+spplot(prodIdx2, 
+       layout=c(3,4),
+       widths=40)
+
+names(uncertainty2) <- c("SOh60_uncertainty",
+                        "SOh62_uncertainty",
+                        "SOh64_uncertainty",
+                        "SOh66_uncertainty")
+spplot(uncertainty2, layout=c(1,4))
+
+
+
+#png(paste0(wd,"/figures/test.png"))
+#par(mfrow=c(1,2))
+library(gridExtra)
+grid.arrange(spplot(prodIdx2, layout=c(3,4)),
+             spplot(uncertainty2, layout=c(1,4)), ncol=2)
+
+library(rasterVis) # use level plot instead
+library(viridis)
+cols <- colorRampPalette(viridis(20))
+plotNames <- c("Reference","RCP4.5","RCP8.5",
+               "","","",
+               "","","",
+               "","","")
+# create a `levelplot` plot
+png(paste0(wd,"/figures/prodIdx_scenarios.png"),units="cm", width = 10, height = 20, res=500)
+levelplot(prodIdx2,
+          #main="Production Index uncertainty",
+          layout=c(3,4),
+          names.attr=plotNames,
+          col.regions=cols,
+          scales=list(draw=FALSE))
+dev.off()
+cols2 <- colorRampPalette(viridis(10, option = "C"))
+png(paste0(wd,"/figures/prodIdx_spatial_uncertainty.png"),units="cm", width = 10, height = 20, res=500)
+levelplot(uncertainty2,
+          layout=c(1,4),
+          names.attr=c("Uncertainty","","",""),
+          col.regions=cols2,
+          scales=list(draw=FALSE))
+dev.off()
 
