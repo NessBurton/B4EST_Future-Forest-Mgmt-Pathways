@@ -24,7 +24,9 @@ library(rnaturalearth)
 # 3. sum all rasters
 # 4. contour plot
 
-# 1. rasterise -----------------------------------------------------------------
+### work -----------------------------------------------------------------------
+
+### rasterise - CAN SKIP TO LINES 96/97 as the rasters exist now
 
 # list production prediction files
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
