@@ -4,7 +4,7 @@
 # description: script to test the development of Future Forest Mangement Pathways (FFMPs) using
 # data provided by Skogforsk.
 
-wd <- "~/R/FFMPs" # laptop
+#wd <- "~/R/FFMPs" # laptop
 wd <- "~/FFMPs" # sandbox
 dirData <- paste0(wd,"/data-raw/")
 dirOut <- paste0(wd,"/data-processed/")
@@ -28,16 +28,15 @@ crs(shpSZ)
 ggplot(shpSZ)+
   geom_sf(aes(fill=ZON2))
 
-### filter to 6 northern seed zones and simplify? -----------------------------------------------------
+### use all zones  -----------------------------------------------------
 
-unique(shpSZ$ZON2)
-
+# 6 zones used in initial testing
+#unique(shpSZ$ZON2)
 # zones to focus on
-zones <- c("1a","1b","1c","2","3","7")
-
-shpSZ %>% 
-  filter(ZON2 %in% zones == T) %>% 
-  ggplot()+geom_sf(aes(fill=ZON2))
+#zones <- c("1a","1b","1c","2","3","7")
+#shpSZ %>% 
+  #filter(ZON2 %in% zones == T) %>% 
+  #ggplot()+geom_sf(aes(fill=ZON2))
 
 crs(shpSZ) # utm
 
@@ -62,49 +61,78 @@ head(dfPerformance)
 # create a spatialpoints dataframe
 spPerformance <- dfPerformance
 coordinates(spPerformance) <- ~ CenterLong + CenterLat
+
 # set crs - assume lat long
-proj4string(spPerformance) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+#proj4string(spPerformance) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+
+# set crs to laea as this is what input climate data was in
+rstClimate <- raster(paste0(dirData,"prc01.tif"))
+crs(rstClimate)
+res(rstClimate)
+plot(rstClimate)
+proj4string(spPerformance) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
+
 crs(spPerformance)
 extent(spPerformance)
 #plot(spPerformance)
 
-# Method 1 (not using as it leaves data gaps)
+# Method 1
 # transform points to utm
-#utm <- crs(shpSZ)
-#spPerformance <- spTransform(spPerformance, CRSobj = utm)
+utm <- crs(shpSZ)
+spPerformance <- spTransform(spPerformance, CRSobj = utm)
 #plot(spPerformance)
-#crs(spPerformance)
+crs(spPerformance)
 # create an empty raster object to the extent of the points and resolution
-# note, resolution should be 1km - so assuming 1000m res ok using utm projection
-#rst <- raster(crs = crs(spPerformance), resolution = c(1000,1000), ext = extent(spPerformance))
-#res(rst)
+# resolution should be 1km - is 0.1 correct for utm? should be 0.01 if decimal degrees
+rst.1 <- raster(crs = crs(spPerformance), resolution = c(0.1,0.1), ext = extent(spPerformance))
+res(rst.1)
+crs(rst.1)
+rst.01 <- raster(crs = crs(spPerformance), resolution = c(0.01,0.01), ext = extent(spPerformance))
+res(rst.01)
+crs(rst.01)
 # rasterise
 #head(spPerformance)
-#rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal, fun=max)
+rstHeightLocal.1 <- rasterize(spPerformance, rst.1, spPerformance$PrHeightLocal)
+rstHeightLocal.01 <- rasterize(spPerformance, rst.01, spPerformance$PrHeightLocal)
 # needs thought on the function used in rasterise (currently default = 'last')
 # could use mean/max/modal etc.
-# adds more uncertainty!
-#plot(rstHeightLocal)
-#summary(rstHeightLocal)
-# some gaps in the data - because of irregular grid?
-#res(rstHeightLocal)
-# requires interpolation to remove gaps
-# can we get around this a different way?
-# i think i've solved using method 2 below
+plot(rstHeightLocal.1)
+summary(rstHeightLocal.1)
+res(rstHeightLocal.1)
+plot(rstHeightLocal.01) # gappy
+
 
 # Method 2
-# empty raster of correct extent and resolution
-rst <- raster(crs = crs(spPerformance), resolution = c(0.1,0.1), ext = extent(spPerformance))
+# rasterise while still laea
+spPerformance <- dfPerformance
+coordinates(spPerformance) <- ~ CenterLong + CenterLat
+proj4string(spPerformance) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
+# empty raster of correct extent and resolution (should be 1km res)
+res(rstClimate)
+rst <- raster(crs = crs(rstClimate), resolution = c(0.01,0.01), ext = extent(spPerformance))
 res(rst)
-# rasterise while still lat long
-rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal, fun=max)
+rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal)
 crs(rstHeightLocal)
-plot(rstHeightLocal)
+plot(rstHeightLocal) # gappy at 0.01
 # now transform to utm, reprojection involves interpolation - default is bilinear
 utm <- crs(shpSZ)
 rstHeightLocal <- projectRaster(rstHeightLocal, crs = utm, res = 1000)
 plot(rstHeightLocal)
 res(rstHeightLocal)
+
+
+# Method 3
+spPerformance <- dfPerformance
+coordinates(spPerformance) <- ~ CenterLong + CenterLat
+proj4string(spPerformance)=CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") # set it to laea
+spPerformance <- spTransform(spPerformance,CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs"))
+gridded(spPerformance) <- TRUE
+# use suggested tolerance limit and convert to spatial pixels df
+pxPerformance <- SpatialPixelsDataFrame(spPerformance, tolerance = 0.5, spPerformance@data)
+rst3 <- raster(pxPerformance[,'PrHeightLocal'])
+plot(rst3)
+res(rst3) # non-regular resolution
+# use this method
 
 ### test getting summary stats per seed zone ----------------------------------------------------------
 
