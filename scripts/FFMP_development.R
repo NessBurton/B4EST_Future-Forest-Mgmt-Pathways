@@ -85,7 +85,7 @@ spUTM <- spTransform(spLatLong, CRSobj = utm)
 #plot(spPerformance)
 crs(spUTM)
 # create an empty raster object to the extent of the points and resolution () should be 1km - 1000 if UTM)
-rstUTM <- raster(crs = crs(spUTM), resolution = c(1000,1000), ext = extent(spUTM))
+rstUTM <- raster(crs = crs(spUTM), resolution = c(1100,1100), ext = extent(spUTM))
 res(rstUTM)
 crs(rstUTM)
 # rasterise
@@ -93,11 +93,21 @@ crs(rstUTM)
 rstHeightLocalUTM <- rasterize(spUTM, rstUTM, spUTM$PrHeightLocal)
 # needs thought on the function used in rasterise (currently default = 'last')
 # could use mean/max/modal etc.
-plot(rstHeightLocalUTM)
+plot(rstHeightLocalUTM); plot(shpSZ,add=T)
 summary(rstHeightLocalUTM)
 res(rstHeightLocalUTM)
-# small gaps - could interpolate to fix?
-# USE METHOD 1 and interpolate?
+writeRaster(rstHeightLocalUTM,paste0(dirOut,"rst_test3_1100.tif"))
+
+# small gaps when using resolution 1000,1000 - could interpolate to fix?
+# use focal
+f <- focal(rstHeightLocalUTM, w=matrix(1,nrow=3, ncol=3), fun=mean, NAonly=TRUE, na.rm=TRUE)
+plot(f)
+writeRaster(f,paste0(dirOut,"rst_test4.tif"))
+f2 <- crop(f,extent(rstHeightLocalUTM))
+plot(f2)
+writeRaster(f2,paste0(dirOut,"rst_test5.tif"),overwrite=TRUE)
+
+# USE METHOD 1 with res 1100 for now
 
 # Method 2
 # rasterise from laea
@@ -113,7 +123,7 @@ plot(rstHeightLocalLAEA)
 # Method 3
 # rasterise when lat/long then transform to UTM
 # create an empty raster object to the extent of the points and resolution () should be 1km - 0.001 for lat/long)
-rstLL <- raster(crs = crs(spLatLong), resolution = c(0.01,0.01), ext = extent(spLatLong))
+rstLL <- raster(crs = crs(spLatLong), resolution = c(0.02,0.02), ext = extent(spLatLong))
 res(rstLL)
 crs(rstLL)
 # rasterise
