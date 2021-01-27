@@ -53,6 +53,11 @@ ggplot(sfSeedZones)+
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
 
+### check memory ---------------------------------------------------------------
+
+memory.size()
+memory.limit()
+memory.limit(size = 56000)
 
 ### rasterise from csv ---------------------------------------------------------
 
@@ -64,7 +69,7 @@ scenario_list <- c()
 
 for (f in files){
   
-  f <- files[1]
+  #f <- files[5]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
@@ -75,7 +80,7 @@ for (f in files){
   
   dfP <- read.csv(f)
   
-  #print("Remove prediction data where survival below 50%")
+  #print("Remove data where survival below 50%")
   
   #dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<0.5)] <- NA
   #dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<0.5)]<-NA
@@ -87,52 +92,37 @@ for (f in files){
   # convert to spatial
   spP <- dfP
   coordinates(spP) <- ~ CenterLong + CenterLat
-  # define LAEA crs
-  proj4string(spP) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
+  crs(spP)
+  
   # define lat long crs
-  #proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  crs(spP)
   
-  print(paste0("Converted to spatial points & original crs defined"))
+  print(paste0("Transform to UTM"))
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
   
-  #print(paste0("Transform to UTM"))
-  spP <- spTransform(spP,CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs"))
-  pxP <- SpatialPixelsDataFrame(spP, tolerance = 0.5, spP@data)
-  crs(pxP)
-  rst1 <- raster(pxP[,'PrSurvSOh60'])
-  plot(rst1)
-  res(rst1);crs(rst1)
-  plot(rst);plot(spSeedZones,add=TRUE)
+  # create an empty raster object to the extent of the points desired resolution
+  # res should be 1km - 1000m if UTM, using 1100m to deal with irregular grid (gaps if using 1000m)
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
   
-  rst2 <- projectRaster(rst1, crs = utm, res = 0.01)
-  plot(rst2);plot(spSeedZones,add=TRUE)
-  
-  dfSeedZones <- extract(rst2, spSeedZones, fun=mean, df=TRUE, na.rm=TRUE)
-  
-  print(paste0("Loop through seed orchard performance and rasterise"))
-  
-  # empty raster of correct extent and resolution
-  rst <- raster(crs = crs(spP), resolution = c(0.01,0.01), ext = extent(spP))
-  res(rst)
-  
-  for (var in names(dfP)[17:20]){ # rasterise performance for 4 seed orchards
+  for (var in names(dfP)[11:22]){ # rasterise performance for 4 seed orchards
     
-    var <- names(dfP)[17]
+    #var <- names(dfP)[11]
     print(paste0("Rasterising for var = ", var))
     
-    # rasterise while still LAEA
-    rstP <- rasterize(spP, rst, dfP[[var]], fun=max) # unsure of use of max function here
-    plot(rstP)
+    # rasterise 
+    rstP <- rasterize(spP, rstUTM, spP[[var]])
+    p1 <- plot(rstP)
+    print(p1)
+
+    print(paste0("Rasterised for var: ", var))
     
-    print(paste0("Rasterised (lat/long) for var: ", var))
-    
-    # now transform to utm, reprojection involves interpolation - default is bilinear
-    rstP <- projectRaster(rstP, crs = utm, res = 0.01)
-    plot(rstP);plot(spSeedZones,add=TRUE)
-    #rstStack <- addLayer(rstStack, rstP)
-    
-    writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
+    writeRaster(rstP, paste0(dirOut,"pred_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
     print(paste0("Written raster for: ", var))
     
   }
   
 }
+
+# read in rasters as stacks and extract values to seed zones
