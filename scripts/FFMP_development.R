@@ -63,76 +63,78 @@ spPerformance <- dfPerformance
 coordinates(spPerformance) <- ~ CenterLong + CenterLat
 
 # set crs - assume lat long
-#proj4string(spPerformance) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+spLatLong <- spPerformance
+proj4string(spLatLong) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
 
 # set crs to laea as this is what input climate data was in
 rstClimate <- raster(paste0(dirData,"prc01.tif"))
 crs(rstClimate)
 res(rstClimate)
 plot(rstClimate)
-proj4string(spPerformance) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
+spLAEA <- spPerformance
+proj4string(spLAEA) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
 
-crs(spPerformance)
-extent(spPerformance)
+crs(spLatLong);crs(spLAEA)
+extent(spLatLong);extent(spLAEA)
 #plot(spPerformance)
 
 # Method 1
-# transform points to utm
+# transform points to utm, assuming lat/long originally, then rasterise
 utm <- crs(shpSZ)
-spPerformance <- spTransform(spPerformance, CRSobj = utm)
+spUTM <- spTransform(spLatLong, CRSobj = utm)
 #plot(spPerformance)
-crs(spPerformance)
-# create an empty raster object to the extent of the points and resolution
-# resolution should be 1km - is 0.1 correct for utm? should be 0.01 if decimal degrees
-rst.1 <- raster(crs = crs(spPerformance), resolution = c(0.1,0.1), ext = extent(spPerformance))
-res(rst.1)
-crs(rst.1)
-rst.01 <- raster(crs = crs(spPerformance), resolution = c(0.01,0.01), ext = extent(spPerformance))
-res(rst.01)
-crs(rst.01)
+crs(spUTM)
+# create an empty raster object to the extent of the points and resolution () should be 1km - 1000 if UTM)
+rstUTM <- raster(crs = crs(spUTM), resolution = c(1000,1000), ext = extent(spUTM))
+res(rstUTM)
+crs(rstUTM)
 # rasterise
 #head(spPerformance)
-rstHeightLocal.1 <- rasterize(spPerformance, rst.1, spPerformance$PrHeightLocal)
-rstHeightLocal.01 <- rasterize(spPerformance, rst.01, spPerformance$PrHeightLocal)
+rstHeightLocalUTM <- rasterize(spUTM, rstUTM, spUTM$PrHeightLocal)
 # needs thought on the function used in rasterise (currently default = 'last')
 # could use mean/max/modal etc.
-plot(rstHeightLocal.1)
-summary(rstHeightLocal.1)
-res(rstHeightLocal.1)
-plot(rstHeightLocal.01) # gappy
-
+plot(rstHeightLocalUTM)
+summary(rstHeightLocalUTM)
+res(rstHeightLocalUTM)
+# small gaps - could interpolate to fix?
+# USE METHOD 1 and interpolate?
 
 # Method 2
-# rasterise while still laea
-spPerformance <- dfPerformance
-coordinates(spPerformance) <- ~ CenterLong + CenterLat
-proj4string(spPerformance) <- CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") 
-# empty raster of correct extent and resolution (should be 1km res)
+# rasterise from laea
+# empty raster of correct extent and resolution (should be 1km res - 1000m if LAEA?)
 res(rstClimate)
-rst <- raster(crs = crs(rstClimate), resolution = c(0.01,0.01), ext = extent(spPerformance))
-res(rst)
-rstHeightLocal <- rasterize(spPerformance, rst, spPerformance$PrHeightLocal)
-crs(rstHeightLocal)
-plot(rstHeightLocal) # gappy at 0.01
-# now transform to utm, reprojection involves interpolation - default is bilinear
-utm <- crs(shpSZ)
-rstHeightLocal <- projectRaster(rstHeightLocal, crs = utm, res = 1000)
-plot(rstHeightLocal)
-res(rstHeightLocal)
-
+rstLAEA <- raster(crs = crs(rstClimate), resolution = c(1000,1000), ext = extent(spLAEA))
+res(rstLAEA)
+rstHeightLocalLAEA <- rasterize(spLAEA, rstLAEA, spLAEA$PrHeightLocal)
+crs(rstHeightLocalLAEA)
+plot(rstHeightLocalLAEA) 
+# not LAEA if issues rasterising to raster of 1000/1000 res?
 
 # Method 3
-spPerformance <- dfPerformance
-coordinates(spPerformance) <- ~ CenterLong + CenterLat
-proj4string(spPerformance)=CRS("+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs") # set it to laea
-spPerformance <- spTransform(spPerformance,CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs"))
-gridded(spPerformance) <- TRUE
+# rasterise when lat/long then transform to UTM
+# create an empty raster object to the extent of the points and resolution () should be 1km - 0.001 for lat/long)
+rstLL <- raster(crs = crs(spLatLong), resolution = c(0.01,0.01), ext = extent(spLatLong))
+res(rstLL)
+crs(rstLL)
+# rasterise
+rstHeightLocalLL <- rasterize(spLatLong, rstLL, spLatLong$PrHeightLocal)
+plot(rstHeightLocalLL)
+summary(rstHeightLocalLL)
+res(rstHeightLocalLL)
+# transform to UTM
+rstHeightLocalUTM2 <- projectRaster(rstHeightLocalLL, crs = utm, res = 1000)
+plot(rstHeightLocalUTM2)
+res(rstHeightLocalUTM2)
+
+# Method 4
+# spatial pixels dataframe
+gridded(spUTM) <- TRUE
 # use suggested tolerance limit and convert to spatial pixels df
-pxPerformance <- SpatialPixelsDataFrame(spPerformance, tolerance = 0.5, spPerformance@data)
+pxPerformance <- SpatialPixelsDataFrame(spUTM, tolerance = 0.955184, spUTM@data)
 rst3 <- raster(pxPerformance[,'PrHeightLocal'])
 plot(rst3)
 res(rst3) # non-regular resolution
-# use this method
+# gappy
 
 ### test getting summary stats per seed zone ----------------------------------------------------------
 
