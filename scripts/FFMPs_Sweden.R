@@ -157,12 +157,58 @@ dirInputRasters <- paste0(dirOut,"pred_rst")
 # list tifs
 tifs <- list.files(paste0(dirInputRasters), full.names = TRUE)
 # just select per seed orchard & var
-heightSO <- grep("PrHeightSOh60", files, value=TRUE)
+heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
+heightSO <- grep("45in50", heightSO, value=TRUE)
+heightSO <- heightSO[-3] # remove mean
 
 # read all scenarios in as stack
 heightSOstack <- do.call(stack, lapply(heightSO, raster))
-#plot(heightSOstack)
+spplot(heightSOstack)
 
 # data frame of stats per seed zone
 dfSeedZones <- extract(heightSOstack, spSeedZones, fun=mean, df=TRUE, na.rm=TRUE)
+
+### gcm spatial uncertainty ----------------------------------------------------
+
+# threshold reclass
+# lets say height above 1000mm
+# reclass matrix
+min(heightSOstack)
+rules1 <- c(0, 1000, 0,  1000, 2500, 1)
+rcl1 <- matrix(rules1, ncol=3, byrow=TRUE)
+rclassStack <- reclassify(heightSOstack,rcl1)
+spplot(rclassStack)
+
+# sum
+#nlayers(rclassStack)
+sumStack <- stackApply(rclassStack, indices=1, fun=sum)
+plot(sumStack)
+
+# contour
+contour1 <- rasterToContour(sumStack)
+contour1 <- st_as_sf(contour1)
+contour1$level <- as.numeric(contour1$level)
+contour1$agreement <- NA
+contour1$agreement[which(contour1$level<=1)]<-"1 scenario"
+contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 scenarios"
+contour1$agreement[which(contour1$level<=3&contour1$level>2)]<-"3 scenarios"
+contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 scenarios"
+contour1$agreement[which(contour1$level<=4&contour1$level>3)]<-"4 scenarios"
+contour1$agreement[which(contour1$level<=5&contour1$level>4)]<-"All scenarios"
+
+contour1$agreement <- as.factor(contour1$agreement)
+
+# convert from MULTILINESTRING to polygon
+contour1 <- st_cast(contour1, to="POLYGON")
+
+plot.title <- paste0("Height above 1000m predicted by 5 GCMs")
+p1 <- ggplot()+
+  #geom_sf(data = sweden)+
+  geom_sf(data=contour1,aes(fill=agreement),col=NA)+
+  scale_fill_viridis(discrete = T, option = "C")+
+  ggtitle(plot.title)+
+  theme_minimal()
+png(paste0(dirFigs,"RCP_GCM_scenario_agreement_SO",SO,".png"), units="cm", width = 20, height = 20, res=1000)
+print(p1)
+dev.off()
 
