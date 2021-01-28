@@ -186,13 +186,29 @@ dfSeedZones_sd$ZON2 <- zoneOrder
 dfSeedZones_sd <- dfSeedZones_sd %>% 
   pivot_longer(cols = 2:6, names_to="fileName",values_to="standard_deviation")
 dfSeedZones_sd$GCM <- substring(dfSeedZones_sd$fileName,15,22)
-sfSeedZones <- left_join(sfSeedZones,dfSeedZones_sd,by="ZON2")
+
+dfSeedZones$sd <- dfSeedZones_sd$standard_deviation
+sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
 
 ggplot(sfSeedZones)+
-  geom_sf(aes(fill=standard_deviation),col=NA)+
-  facet_wrap(~GCM.x)+
+  geom_sf(aes(fill=sd),col=NA)+
+  facet_wrap(~GCM)+
   theme_minimal()
 
+dfSeedZones$ZON2 <- factor(dfSeedZones$ZON2, ordered = T, levels=zoneOrder)
+ggplot(dfSeedZones)+
+  geom_point(aes(GCM,mean))+
+  # add error bars using sd (see below)
+  #geom_errorbar(limits)+
+  facet_wrap(~ZON2)+
+  theme_minimal()
+
+# example code for error bars 
+#summarise(famGain = mean(na.omit(value)),
+#seGain = sd(na.omit(value)/sqrt(n())),
+#upr = famGain + 1.96 * seGain,
+#lwr = famGain - 1.96 * seGain
+#limits = aes(ymin = lwr, ymax = upr)
 
 ### gcm spatial uncertainty ----------------------------------------------------
 
