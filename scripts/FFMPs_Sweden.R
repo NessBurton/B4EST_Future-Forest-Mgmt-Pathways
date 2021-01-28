@@ -52,6 +52,7 @@ ggplot(sfSeedZones)+
 
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
+rm(sfSeedZones)
 
 ### check memory ---------------------------------------------------------------
 
@@ -79,25 +80,29 @@ for (f in files){
   print(paste0("Processing for scenario = ", scenario))
   
   dfP <- read.csv(f)
+  dfP <- (dfP)[,c(2:3,11:22)]
+  dfP[,7:14] <- round(dfP[,7:14]*100, digits = 3) # convert survival & prod indices to %
   
-  #print("Remove data where survival below 50%")
-  
-  #dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<0.5)] <- NA
-  #dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<0.5)]<-NA
-  #dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64<0.5)]<-NA
-  #dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66<0.5)]<-NA
+  # apply thresholds
+  #dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<50)]<-NA
+  #dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<50)]<-NA
+  #dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64<50)]<-NA
+  #dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66<50)]<-NA
+  #dfP$PrProdidxSOh60[which(dfP$PrProdidxSOh60<100)]<-NA
+  #dfP$PrProdidxSOh62[which(dfP$PrProdidxSOh62<100)]<-NA
+  #dfP$PrProdidxSOh64[which(dfP$PrProdidxSOh64<100)]<-NA
+  #dfP$PrProdidxSOh66[which(dfP$PrProdidxSOh66<100)]<-NA
   
   print("Convert to spatial points")
   
   # convert to spatial
   spP <- dfP
+  rm(dfP)
   coordinates(spP) <- ~ CenterLong + CenterLat
-  crs(spP)
   
   # define lat long crs
   proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-  crs(spP)
-  
+
   print(paste0("Transform to UTM"))
   # transform points to utm
   spP <- spTransform(spP, CRSobj = utm)
@@ -106,23 +111,53 @@ for (f in files){
   # res should be 1km - 1000m if UTM, using 1100m to deal with irregular grid (gaps if using 1000m)
   rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
   
-  for (var in names(dfP)[11:22]){ # rasterise performance for 4 seed orchards
+  for (var in names(spP)){ 
     
-    #var <- names(dfP)[11]
+    #var <- names(spP)[10]
+    
+    # create unique filepath for temp directory
+    #dir.create(file.path("D:",var), showWarnings = FALSE)
+    
+    # set temp directory
+    #rasterOptions(tmpdir=file.path("D:",var))
+    #rasterOptions()
+
     print(paste0("Rasterising for var = ", var))
     
     # rasterise 
-    rstP <- rasterize(spP, rstUTM, spP[[var]])
-    p1 <- plot(rstP)
-    print(p1)
-
+    #tmp <- rasterTmpFile()
+    #rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE, filename=tmp)
+    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    
     print(paste0("Rasterised for var: ", var))
     
-    writeRaster(rstP, paste0(dirOut,"pred_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
+    writeRaster(rst, paste0(dirOut,"pred_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
+    
     print(paste0("Written raster for: ", var))
+    
+    #unlink(file.path("D:",var), recursive = TRUE)
     
   }
   
-}
+ }
 
-# read in rasters as stacks and extract values to seed zones
+# link for setting up temp directory
+# https://stackoverflow.com/questions/18955305/setting-an-overwriteable-temporary-file-for-rasters-in-r
+
+
+### read in rasters as stacks and extract values to seed zones -----------------
+
+dirInputRasters <- paste0(dirOut,"pred_rst")
+
+# list tifs
+tifs <- list.files(paste0(dirInputRasters), full.names = TRUE)
+# just select per seed orchard & var
+heightSO <- grep("PrHeightSOh60", files, value=TRUE)
+
+# read all scenarios in as stack
+heightSOstack <- do.call(stack, lapply(heightSO, raster))
+#plot(heightSOstack)
+
+# data frame of stats per seed zone
+dfSeedZones <- extract(heightSOstack, spSeedZones, fun=mean, df=TRUE, na.rm=TRUE)
+
