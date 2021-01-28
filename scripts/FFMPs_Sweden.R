@@ -5,7 +5,8 @@
 
 wd <- "~/FFMPs" # sandbox
 dirData <- paste0(wd,"/data-raw/")
-dirOut <- paste0(wd,"/data-processed/")
+dataDrive <- "D:"
+dirOut <- paste0(dataDrive,"/FFMP-data-processed/")
 dirFigs <- paste0(wd,"/figures/")
 
 ### libraries ------------------------------------------------------------------
@@ -84,14 +85,14 @@ for (f in files){
   dfP[,7:14] <- round(dfP[,7:14]*100, digits = 3) # convert survival & prod indices to %
   
   # apply thresholds
-  #dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<50)]<-NA
-  #dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<50)]<-NA
-  #dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64<50)]<-NA
-  #dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66<50)]<-NA
-  #dfP$PrProdidxSOh60[which(dfP$PrProdidxSOh60<100)]<-NA
-  #dfP$PrProdidxSOh62[which(dfP$PrProdidxSOh62<100)]<-NA
-  #dfP$PrProdidxSOh64[which(dfP$PrProdidxSOh64<100)]<-NA
-  #dfP$PrProdidxSOh66[which(dfP$PrProdidxSOh66<100)]<-NA
+  dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60<50)]<-NA
+  dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62<50)]<-NA
+  dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64<50)]<-NA
+  dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66<50)]<-NA
+  dfP$PrProdidxSOh60[which(dfP$PrProdidxSOh60<100)]<-NA
+  dfP$PrProdidxSOh62[which(dfP$PrProdidxSOh62<100)]<-NA
+  dfP$PrProdidxSOh64[which(dfP$PrProdidxSOh64<100)]<-NA
+  dfP$PrProdidxSOh66[which(dfP$PrProdidxSOh66<100)]<-NA
   
   print("Convert to spatial points")
   
@@ -131,7 +132,7 @@ for (f in files){
     
     print(paste0("Rasterised for var: ", var))
     
-    writeRaster(rst, paste0(dirOut,"pred_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
+    writeRaster(rst, paste0(dirOut,"pred_rst/",var,"_",scenario,"_thresholds.tif"),overwrite=TRUE)
     
     print(paste0("Written raster for: ", var))
     
@@ -159,6 +160,7 @@ tifs <- list.files(paste0(dirInputRasters), full.names = TRUE)
 # just select per seed orchard & var
 heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
 heightSO <- grep("45in50", heightSO, value=TRUE)
+heightSO <- grep("thresholds", heightSO, value=TRUE)
 heightSO <- heightSO[-3] # remove mean
 
 # read all scenarios in as stack
