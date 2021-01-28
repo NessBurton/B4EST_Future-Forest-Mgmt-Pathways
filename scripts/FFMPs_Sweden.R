@@ -145,6 +145,11 @@ for (f in files){
 # https://stackoverflow.com/questions/18955305/setting-an-overwriteable-temporary-file-for-rasters-in-r
 
 
+# note issue with ref climate - different column set-up to the rest of the files?
+files
+refClimate <- read.csv(files[13])
+head(refClimate)
+
 ### read in rasters as stacks and extract values to seed zones -----------------
 
 dirInputRasters <- paste0(dirOut,"pred_rst")
