@@ -53,7 +53,6 @@ ggplot(sfSeedZones)+
 
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
-rm(sfSeedZones)
 
 ### check memory ---------------------------------------------------------------
 
@@ -169,6 +168,31 @@ spplot(heightSOstack)
 
 # data frame of stats per seed zone
 dfSeedZones <- extract(heightSOstack, spSeedZones, fun=mean, df=TRUE, na.rm=TRUE)
+dfSeedZones$ZON2 <- zoneOrder
+head(dfSeedZones)
+dfSeedZones <- dfSeedZones %>% 
+  pivot_longer(cols = 2:6, names_to="fileName",values_to="mean")
+dfSeedZones$GCM <- substring(dfSeedZones$fileName,15,22)
+sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
+
+ggplot(sfSeedZones)+
+  geom_sf(aes(fill=mean),col=NA)+
+  facet_wrap(~GCM)+
+  theme_minimal()
+# categorise mean instead of it being continuous?
+
+dfSeedZones_sd <- extract(heightSOstack, spSeedZones, fun=sd, df=TRUE, na.rm=TRUE)
+dfSeedZones_sd$ZON2 <- zoneOrder
+dfSeedZones_sd <- dfSeedZones_sd %>% 
+  pivot_longer(cols = 2:6, names_to="fileName",values_to="standard_deviation")
+dfSeedZones_sd$GCM <- substring(dfSeedZones_sd$fileName,15,22)
+sfSeedZones <- left_join(sfSeedZones,dfSeedZones_sd,by="ZON2")
+
+ggplot(sfSeedZones)+
+  geom_sf(aes(fill=standard_deviation),col=NA)+
+  facet_wrap(~GCM.x)+
+  theme_minimal()
+
 
 ### gcm spatial uncertainty ----------------------------------------------------
 
