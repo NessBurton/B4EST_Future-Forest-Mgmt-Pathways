@@ -158,21 +158,44 @@ dirInputRasters <- paste0(dirOut,"pred_rst")
 tifs <- list.files(paste0(dirInputRasters), full.names = TRUE)
 # just select per seed orchard & var
 heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
-heightSO <- grep("45in50", heightSO, value=TRUE)
+#heightSO <- grep("85in50", heightSO, value=TRUE)
 heightSO <- grep("thresholds", heightSO, value=TRUE)
-heightSO <- heightSO[-3] # remove mean
+#heightSO <- heightSO[-3] # remove mean
 
 # read all scenarios in as stack
 heightSOstack <- do.call(stack, lapply(heightSO, raster))
 spplot(heightSOstack)
 
-# data frame of stats per seed zone
-dfSeedZones <- extract(heightSOstack, spSeedZones, fun=mean, df=TRUE, na.rm=TRUE)
-dfSeedZones$ZON2 <- zoneOrder
+# loop to calculate stats per seed zone
+
+funcs <- c("mean","sd","min","max")
+
+dfSeedZones <- data.frame()
+
+for (f in funcs){
+  
+  #f <- funcs[1] # for testing
+  
+  dfValues <- extract(heightSOstack, spSeedZones, fun=f, df=TRUE, na.rm=TRUE)
+  dfValues$ZON2 <- zoneOrder
+  dfValues <- dfValues %>% pivot_longer(cols = 2:13, names_to="fileName",values_to=f)
+  
+  #dfValues$GCM <- substring(dfValues$fileName,15,22)
+  for (i in 1:nrow(dfValues)){
+    dfValues$GCM[i] <- strsplit(dfValues$fileName[i], "[_]")[[1]][2]
+  }
+  
+  if(f=="mean"){
+    dfSeedZones <- rbind(dfSeedZones,dfValues[,c(2,5,4)])
+  }else{
+      dfSeedZones <- left_join(dfSeedZones,dfValues,by=c("ZON2","GCM"))
+    }
+  
+}
+
 head(dfSeedZones)
-dfSeedZones <- dfSeedZones %>% 
-  pivot_longer(cols = 2:6, names_to="fileName",values_to="mean")
-dfSeedZones$GCM <- substring(dfSeedZones$fileName,15,22)
+dfSeedZones <- dfSeedZones[,c(1,2,3,6,9,12)]
+
 sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
 
 ggplot(sfSeedZones)+
@@ -181,21 +204,16 @@ ggplot(sfSeedZones)+
   theme_minimal()
 # categorise mean instead of it being continuous?
 
-dfSeedZones_sd <- extract(heightSOstack, spSeedZones, fun=sd, df=TRUE, na.rm=TRUE)
-dfSeedZones_sd$ZON2 <- zoneOrder
-dfSeedZones_sd <- dfSeedZones_sd %>% 
-  pivot_longer(cols = 2:6, names_to="fileName",values_to="standard_deviation")
-dfSeedZones_sd$GCM <- substring(dfSeedZones_sd$fileName,15,22)
-
-dfSeedZones$sd <- dfSeedZones_sd$standard_deviation
-sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
-
 ggplot(sfSeedZones)+
   geom_sf(aes(fill=sd),col=NA)+
   facet_wrap(~GCM)+
   theme_minimal()
 
 dfSeedZones$ZON2 <- factor(dfSeedZones$ZON2, ordered = T, levels=zoneOrder)
+
+dfSeedZones <- dfSeedZones %>% 
+  mutate(SE = sd/sqrt(count))
+
 ggplot(dfSeedZones)+
   geom_point(aes(GCM,mean))+
   # add error bars using sd (see below)
@@ -210,13 +228,19 @@ ggplot(dfSeedZones)+
 #lwr = famGain - 1.96 * seGain
 #limits = aes(ymin = lwr, ymax = upr)
 
+
 ### gcm spatial uncertainty ----------------------------------------------------
+
+# sweden outline
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+sweden <- worldmap[worldmap$name == 'Sweden',]
 
 # threshold reclass
 # lets say height above 1000mm
 # reclass matrix
 min(heightSOstack)
-rules1 <- c(0, 1000, 0,  1000, 2500, 1)
+rules1 <- c(0, 2000, 0,  2000, 3000, 1)
 rcl1 <- matrix(rules1, ncol=3, byrow=TRUE)
 rclassStack <- reclassify(heightSOstack,rcl1)
 spplot(rclassStack)
@@ -243,14 +267,66 @@ contour1$agreement <- as.factor(contour1$agreement)
 # convert from MULTILINESTRING to polygon
 contour1 <- st_cast(contour1, to="POLYGON")
 
-plot.title <- paste0("Height above 1000m predicted by 5 GCMs")
+plot.title <- paste0("GCM agreement height > 2000m | RCP8.5 | 2050")
 p1 <- ggplot()+
-  #geom_sf(data = sweden)+
+  geom_sf(data = sweden)+
   geom_sf(data=contour1,aes(fill=agreement),col=NA)+
   scale_fill_viridis(discrete = T, option = "C")+
   ggtitle(plot.title)+
   theme_minimal()
-png(paste0(dirFigs,"RCP_GCM_scenario_agreement_SO",SO,".png"), units="cm", width = 20, height = 20, res=1000)
+png(paste0(dirFigs,"GCM_agreement_SO60_h2000.png"), units="cm", width = 20, height = 20, res=1000)
 print(p1)
 dev.off()
 
+
+# performance
+# just select per seed orchard & var
+prodIdxSO <- grep("PrProdidxSOh60", tifs, value=TRUE)
+prodIdxSO <- grep("85in50", prodIdxSO, value=TRUE)
+prodIdxSO <- grep("thresholds", prodIdxSO, value=TRUE)
+prodIdxSO <- prodIdxSO[-3] # remove mean
+
+# read all scenarios in as stack
+prodIdxSOstack <- do.call(stack, lapply(prodIdxSO, raster))
+spplot(prodIdxSOstack)
+
+# threshold reclass
+# lets say prodIdx above 120%
+# reclass matrix
+rules2 <- c(0, 120, 0,  120, 150, 1)
+rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
+rclassStack <- reclassify(prodIdxSOstack,rcl2)
+spplot(rclassStack)
+
+# sum
+#nlayers(rclassStack)
+sumStack <- stackApply(rclassStack, indices=1, fun=sum)
+plot(sumStack)
+
+# contour
+contour2 <- rasterToContour(sumStack)
+contour2 <- st_as_sf(contour2)
+contour2$level <- as.numeric(contour2$level)
+contour2$agreement <- NA
+contour2$agreement[which(contour2$level<=1)]<-"1 scenario"
+contour2$agreement[which(contour2$level<=2&contour2$level>1)]<-"2 scenarios"
+contour2$agreement[which(contour2$level<=3&contour2$level>2)]<-"3 scenarios"
+contour2$agreement[which(contour2$level<=2&contour2$level>1)]<-"2 scenarios"
+contour2$agreement[which(contour2$level<=4&contour2$level>3)]<-"4 scenarios"
+contour2$agreement[which(contour2$level<=5&contour2$level>4)]<-"All scenarios"
+
+contour2$agreement <- as.factor(contour2$agreement)
+
+# convert from MULTILINESTRING to polygon
+contour2 <- st_cast(contour2, to="POLYGON")
+
+plot.title <- paste0("GCM agreement prodIdx > 120% | RCP8.5 | 2050")
+p2 <- ggplot()+
+  geom_sf(data = sweden)+
+  geom_sf(data=contour2,aes(fill=agreement),col=NA)+
+  scale_fill_viridis(discrete = T, option = "C")+
+  ggtitle(plot.title)+
+  theme_minimal()
+png(paste0(dirFigs,"GCM_agreement_SO60_p120.png"), units="cm", width = 20, height = 20, res=1000)
+print(p2)
+dev.off()
