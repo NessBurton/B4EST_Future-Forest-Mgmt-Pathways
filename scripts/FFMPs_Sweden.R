@@ -225,21 +225,27 @@ dfSeedZones <- dfSeedZones %>%
          upr = mean + 1.96 * SE,
          lwr = mean - 1.96 * SE)
 
+write.csv(dfSeedZones, paste0(dirOut, "HeightSO60_raster_seedZone_stats.csv"),row.names = F)
+
 limits <- aes(ymin=lwr,ymax=upr)
 
 scenarios <- unique(dfSeedZones$GCM)
 scenario_filter <- grep("85in50", scenarios, value=TRUE)
 
-dfSeedZones %>% 
-  filter(GCM %in% scenario_filter) %>% 
-  ggplot(aes(GCM,mean, color=GCM))+
-  geom_point()+
-  geom_errorbar(aes(ymin=lwr,ymax=upr),orientation = "x")+
-  scale_y_continuous(limits=c(0,2400))+
-  facet_wrap(~ZON2)+
-  theme(axis.text.x = element_blank())+
-  theme_minimal()
+df85 <- dfSeedZones %>% 
+  filter(GCM %in% scenario_filter)
 
+ggplot(df85, aes(x=GCM,y=mean, color=GCM))+
+  geom_point()+
+  #geom_errorbar(limits)+
+  geom_errorbar(aes(ymin=min,ymax=max))+ # just using min/max as SE upr/lwr values tiny
+  scale_y_continuous(limits=c(0,3000))+
+  facet_wrap(~ZON2, nrow = 2, ncol = 11)+
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  ylab("Height (mm) - mean predicted")+
+  theme_bw()
 
 # example code for error bars 
 #summarise(famGain = mean(na.omit(value)),
@@ -247,6 +253,35 @@ dfSeedZones %>%
 #upr = famGain + 1.96 * seGain,
 #lwr = famGain - 1.96 * seGain
 #limits = aes(ymin = lwr, ymax = upr)
+
+# reorganise to compare GCMs against ensemble mean results
+
+#dfEnsembleMean <- dfSeedZones[,1:3] %>% filter(GCM %in% c("MEAN45in50","MEAN85in50")) %>% 
+  #pivot_wider(names_from="GCM",values_from="mean")
+
+#dfSeedZones <- dfSeedZones %>% filter(GCM %in% c("MEAN45in50","MEAN85in50")==FALSE) %>% 
+  #left_join(., dfEnsembleMean,by="ZON2")
+
+#gcms <- unique(dfSeedZones$GCM)
+#rcp45 <-  grep("45", gcms, value=TRUE)
+#rcp85 <- grep("85", gcms, value=TRUE)
+
+#dfSeedZones$MEAN45in50[which(dfSeedZones$GCM %in% rcp85)] <- NA
+#dfSeedZones$MEAN85in50[which(dfSeedZones$GCM %in% rcp45)] <- NA
+
+# calculate new standard devation (from ensemble mean not seed zone mean)
+# and calculate coefficient of variation for each GCM
+# think this will actually be easier in df form
+#height85 <- grep("85in50", heightSO, value=TRUE)
+#height85 <- height85[-3] # remove mean
+#height85stack <- do.call(stack, lapply(height85, raster))
+#spplot(height85stack)
+
+#dfSeedZones %>% mutate()
+
+#ggplot(df85, aes(GCM,CoV))+
+  #geom_point()+
+  #facet_wrap(~ZON2)
 
 
 ### gcm spatial uncertainty ----------------------------------------------------
