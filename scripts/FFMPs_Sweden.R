@@ -210,16 +210,36 @@ ggplot(sfSeedZones)+
   theme_minimal()
 
 dfSeedZones$ZON2 <- factor(dfSeedZones$ZON2, ordered = T, levels=zoneOrder)
+dfSeedZones$GCM <- factor(dfSeedZones$GCM)
+
+# calculate number of cells in each zone
+dfCount <- extract(heightSOstack, spSeedZones, fun=function(x,...)length(na.omit(x)), df=TRUE, na.rm=TRUE)
+dfCount <- dfCount[,1:2]
+dfCount$ZON2 <- zoneOrder
+colnames(dfCount)[2] <- "count"
+dfCount <- dfCount[,-1]
+dfSeedZones <- left_join(dfSeedZones,dfCount)
 
 dfSeedZones <- dfSeedZones %>% 
-  mutate(SE = sd/sqrt(count))
+  mutate(SE = sd/sqrt(count),
+         upr = mean + 1.96 * SE,
+         lwr = mean - 1.96 * SE)
 
-ggplot(dfSeedZones)+
-  geom_point(aes(GCM,mean))+
-  # add error bars using sd (see below)
-  #geom_errorbar(limits)+
+limits <- aes(ymin=lwr,ymax=upr)
+
+scenarios <- unique(dfSeedZones$GCM)
+scenario_filter <- grep("85in50", scenarios, value=TRUE)
+
+dfSeedZones %>% 
+  filter(GCM %in% scenario_filter) %>% 
+  ggplot(aes(GCM,mean, color=GCM))+
+  geom_point()+
+  geom_errorbar(aes(ymin=lwr,ymax=upr),orientation = "x")+
+  scale_y_continuous(limits=c(0,2400))+
   facet_wrap(~ZON2)+
+  theme(axis.text.x = element_blank())+
   theme_minimal()
+
 
 # example code for error bars 
 #summarise(famGain = mean(na.omit(value)),
