@@ -32,10 +32,17 @@
     All.predictions.70 <- list.files(path = paste0(dirOut, "pred_rst"), pattern='*in50_thresholds.tif$', all.files=TRUE, full.names=TRUE)
     # just height predictions
     All.predictions.70 <- grep("PrHeight", All.predictions.70, value=TRUE)
+    # a single seed orchard
+    All.predictions.70 <- grep("SOh60", All.predictions.70, value=TRUE)
+    # remove ensemble mean
+    All.predictions.70 <- All.predictions.70[-c(5:6)]
+    
     #All.predictions.present <- raster::raster("SpainPredictions/ScotsPine_Prediction_Present.tif")
     All.predictions.present <- list.files(path = paste0(dirOut, "pred_rst"), pattern='*Refclimate_thresholds.tif$', all.files=TRUE, full.names=TRUE)
     # just height predictions
     All.predictions.present <- grep("PrHeight", All.predictions.present, value=TRUE)
+    # a single seed orchard
+    All.predictions.present <- grep("SOh60", All.predictions.present, value=TRUE)
 
     # turn into rasters
     All.predictions.70.rast <- lapply(All.predictions.70, raster)
@@ -52,21 +59,25 @@
     #                                    "no_RCP2_6_in70", "no_RCP4_5_in70", "no_RCP6_0in70", "no_RCP8_5_in70") 
         
     All.predictions.70.stack <- stack(All.predictions.70.rast, All.predictions.present)
-    #spplot(All.predictions.70.stack)
+    spplot(All.predictions.70.stack)
     
     # calculate the coefficient of variance (CV) for all GCMs and RCPs
     
     names(All.predictions.70.stack)
 
     # grouped by RCP from every GCM
-    RCP_VC <- stackApply(All.predictions.70.stack, indices=c(1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4), fun=cv)
-
+    #RCP_VC <- stackApply(All.predictions.70.stack, indices=c(1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4, 1,2,3,4), fun=cv)
+    RCP_VC <- stackApply(All.predictions.70.stack, indices=c(1,2,1,2,1,2,1,2,1,2), fun=cv)
+    spplot(RCP_VC)
+    
     # grouped by GCM from every GCM
-    GCM_VC <- stackApply(All.predictions.70.stack, indices=c(1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4, 5,5,5,5), fun=cv)
-
+    #GCM_VC <- stackApply(All.predictions.70.stack, indices=c(1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4, 5,5,5,5), fun=cv)
+    GCM_VC <- stackApply(All.predictions.70.stack, indices=c(1,1,2,2,3,3,4,4,5,5), fun=cv)
+    spplot(GCM_VC)
+    
     # for each RCP in each GCM
     GCM_RCP_VC.all <- stackApply(All.predictions.70.stack, indices=c(1:nlayers(All.predictions.70.stack)), fun=cv)
-
+    spplot(GCM_RCP_VC.all)
 
     # randomly sample rasters for stats tests
     GCM_RCP.rs.rast.ls <- list()
@@ -86,18 +97,20 @@
 
 
     # load ASTER elevation data (30m resolution)
-    ASTER.elevation.dem.list <- list.files(path = "Aster_Elevation", pattern='*_dem.tif$', all.files=TRUE, full.names=TRUE)
+    #ASTER.elevation.dem.list <- list.files(path = "Aster_Elevation", pattern='*_dem.tif$', all.files=TRUE, full.names=TRUE)
+    # use Swedish data from csv instead?
+    rstElev <- raster(paste0(dirOut,"pred_rst/elevation.tif"))
 
     # turn files into rasters
-    ASTER.elevation.dem.rast <- lapply(ASTER.elevation.dem.list, raster)
+    #ASTER.elevation.dem.rast <- lapply(ASTER.elevation.dem.list, raster)
     
     # for later analysis and plotting, turn rasters into dataframes
-    ASTER.elevation.dem.rast$fun <- mean    # add the mean function to the list of rasters
-    ASTER.elevation.dem.mosaic <- do.call(mosaic, ASTER.elevation.dem.rast) # use mosaic from the raster package to merge all tiles together
+    #ASTER.elevation.dem.rast$fun <- mean    # add the mean function to the list of rasters
+    #ASTER.elevation.dem.mosaic <- do.call(mosaic, ASTER.elevation.dem.rast) # use mosaic from the raster package to merge all tiles together
 
     # resample the data 
-    ASTER.elevation.dem.res.70 <- resample(ASTER.elevation.dem.mosaic, All.predictions.70.stack, method="bilinear", filename="Aster_Elevation/Aster_Elevation_resampled.tif", overwrite=TRUE)
-    crs(ASTER.elevation.dem.res.70) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"   
+    #ASTER.elevation.dem.res.70 <- resample(ASTER.elevation.dem.mosaic, All.predictions.70.stack, method="bilinear", filename="Aster_Elevation/Aster_Elevation_resampled.tif", overwrite=TRUE)
+    #crs(ASTER.elevation.dem.res.70) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"   
 
 
     All.predictions.70.elev.stack <- stack(All.predictions.70.stack, ASTER.elevation.dem.res.70)
