@@ -35,6 +35,7 @@ utm <- crs(sfSeedZones)
 
 # dissolve/merge zones by ZON2 to simplify
 head(sfSeedZones)
+sfSeedZones$ZON2 <- as.factor(sfSeedZones$ZON2)
 
 # add area to have a variable to be able to summarise
 sfSeedZones$area <- st_area(sfSeedZones) 
