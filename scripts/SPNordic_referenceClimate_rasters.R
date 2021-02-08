@@ -81,3 +81,27 @@ for (var in names(spRef)){
   #unlink(file.path("D:",var), recursive = TRUE)
   
 }
+
+### elevation raster -----------------------------------------------------------
+
+dfRef <-  read.csv(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+head(dfRef)
+spRef <- dfRef
+#rm(dfRef)
+coordinates(spRef) <- ~ CenterLong + CenterLat
+
+# define lat long crs
+proj4string(spRef) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+
+# transform points to utm
+spRef <- spTransform(spRef, CRSobj = utm)
+
+# create an empty raster object to the extent of the points desired resolution
+# res should be 1km - 1000m if UTM, using 1100m to deal with irregular grid (gaps if using 1000m)
+rstUTM <- raster(crs = crs(spRef), resolution = c(1100,1100), ext = extent(spRef))
+
+rst <- rasterize(spRef, rstUTM, spRef$GridAlt, fun=max, na.rm=TRUE) 
+
+plot(rst)
+
+writeRaster(rst, paste0(dirOut,"pred_rst/elevation.tif"),overwrite=TRUE)
