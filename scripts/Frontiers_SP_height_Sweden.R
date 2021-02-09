@@ -161,6 +161,7 @@ for (s in RCP_GCMs){
 }
 
 ### rasterize Z-score per RCP-GCM + plot agreement? ----------------------------
+
 # Not sure how useful this is...
 
 library(raster)
@@ -242,6 +243,51 @@ ggplot()+
   scale_fill_viridis(discrete = T, option = "C")+
   #ggtitle(plot.title)+
   theme_minimal()
+
+### height threshold agreement -------------------------------------------------
+
+for (s in RCP_GCMs){
+  
+  #s <- RCP_GCMs[1]
+  dfFilter <- dfPredictions %>% filter(scenario==s)
+  
+  # convert to spatial
+  spP <- dfFilter
+  rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  rst <- rasterize(spP, rstUTM, spP$PrHeightLocal, fun=max, na.rm=TRUE) 
+  
+  writeRaster(rst, paste0(dirOut,"pred_rst/PrHeightLocal_",s,".tif"),overwrite=TRUE)
+  
+}
+
+# list height tifs 
+rsts <-  list.files(paste0(dirOut, "pred_rst/"),pattern = "*.tif", full.names = T)
+rsts <- grep("PrHeightLocal|45in50", rsts, value=TRUE)
+
+# raster stack
+heightStack <- stack(rsts)
+spplot(heightStack)
+
+# threshold reclass
+# lets say height above 1800 m
+# reclass matrix
+rules2 <- c(0, 1800, 0,  1800, 2500, 1)
+rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
+rclassStack <- reclassify(heightStack,rcl2)
+spplot(rclassStack)
+
+sumStack <- stackApply(rclassStack, indices=1, fun=sum)
+plot(sumStack)
 
 ### calculate CoV --------------------------------------------------------------
 
