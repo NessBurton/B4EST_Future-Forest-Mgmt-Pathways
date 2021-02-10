@@ -63,6 +63,7 @@ dfPredictions$RCP <- ifelse(grepl("45in50", dfPredictions$scenario), '4.5',
 
 
 write.csv(dfPredictions, paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"), row.names = F)
+dfPredictions <- read.csv(paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"))
 
 ### density distributions per GCM ----------------------------------------------
 
@@ -165,6 +166,7 @@ for (s in RCP_GCMs){
 # Not sure how useful this is...
 
 library(raster)
+library(viridis)
 
 # for utm crs
 sfSeedZones <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
@@ -236,7 +238,6 @@ contour1$agreement <- factor(contour1$agreement, ordered=TRUE, levels=c("4 GCMs 
 
 contour1 <- st_cast(contour1, to="POLYGON")
 
-library(viridis)
 ggplot()+
   geom_sf(data = sweden)+
   geom_sf(data=contour1,aes(fill=agreement),col=NA)+
@@ -272,22 +273,86 @@ for (s in RCP_GCMs){
 
 # list height tifs 
 rsts <-  list.files(paste0(dirOut, "pred_rst/"),pattern = "*.tif", full.names = T)
-rsts <- grep("PrHeightLocal|45in50", rsts, value=TRUE)
+rsts <- grep("PrHeightLocal", rsts, value=TRUE)
 
-# raster stack
-heightStack <- stack(rsts)
-spplot(heightStack)
+lstRCP <- c("45in50","85in50")
 
-# threshold reclass
-# lets say height above 1800 m
-# reclass matrix
-rules2 <- c(0, 1800, 0,  1800, 2500, 1)
-rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
-rclassStack <- reclassify(heightStack,rcl2)
-spplot(rclassStack)
+for (rcp in lstRCP){
+  
+  #rcp <- lstRCP[1]
+  rsts1 <- grep(rcp, rsts, value=TRUE)
+  rcp.name <- if(rcp=="45in50"){"RCP4.5"}else{"RCP8.5"}
+  
+  # raster stack
+  heightStack <- stack(rsts1)
+  spplot(heightStack)
+  
+  # threshold reclass
+  # lets say height above 1500 m
+  # reclass matrix
+  rules2 <- c(0, 1500, 0,  1500, 2500, 1)
+  rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
+  rclassStack <- reclassify(heightStack,rcl2)
+  #spplot(rclassStack)
+  
+  sumStack <- stackApply(rclassStack, indices=1, fun=sum)
+  #plot(sumStack)
+  
+  # contour
+  contour1 <- rasterToContour(sumStack)
+  contour1 <- st_as_sf(contour1)
+  contour1$level <- as.numeric(contour1$level)
+  contour1$agreement <- NA
+  contour1$agreement[which(contour1$level<=1)]<-"1 GCM"
+  contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 GCMs"
+  contour1$agreement[which(contour1$level<=3&contour1$level>2)]<-"3 GCMs"
+  contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 GCMs"
+  contour1$agreement[which(contour1$level<=4&contour1$level>3)]<-"4 GCMs"
+  contour1$agreement[which(contour1$level<=5&contour1$level>4)]<-"5 GCMs"
 
-sumStack <- stackApply(rclassStack, indices=1, fun=sum)
-plot(sumStack)
+  contour1$agreement <- factor(contour1$agreement)
+  contour1 <- st_cast(contour1, to="POLYGON")
+  
+  plot.title <- paste0("Local provenance in 2050 ",rcp.name,": height > 1500mm")
+  g1 <- ggplot()+
+    geom_sf(data = sweden, fill=NA)+
+    geom_sf(data=contour1,aes(fill=agreement),col=NA)+
+    scale_fill_viridis(discrete = T, option = "C")+
+    ggtitle(plot.title)+
+    theme_bw()
+  png(paste0(dirFigs,"GCM_agreement_localProv_height_over_1500_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
+  print(g1)
+  dev.off()
+  
+}
+
+### map uncertainty ------------------------------------------------------------
+
+# Chakraborty et al (2016) maps of uncertainty 
+# (calculated as the difference in predicted performance between two climate scenarios, 
+# as a percentage of the mean of the two predictions).
+
+# stacks of rcp4.5 and 8.5
+rsts4.5 <- grep("45in50", rsts, value=TRUE)
+rsts8.5 <- grep("85in50", rsts, value=TRUE)
+
+stackHeight4.5 <- stack(rsts4.5)
+spplot(stackHeight4.5)
+stackHeight8.5 <- stack(rsts8.5)
+spplot(stackHeight8.5)
+
+stackDiff <- stackHeight8.5 - stackHeight4.5
+spplot(stackDiff)
+rstAvg <- mean(stackHeight4.5,stackHeight8.5)
+spplot(rstAvg)
+
+rstUncert <- stackDiff/rstAvg * 100
+spplot(rstUncert)
+
+fig1 <- stack(prodIdxSOh60_45,prodIdxSOh60_85,avg,uncertainty)
+names(fig1) <- c("RCP4.5","RCP8.5","Mean","Uncertainty")
+plot(fig1)
+
 
 ### calculate CoV --------------------------------------------------------------
 
