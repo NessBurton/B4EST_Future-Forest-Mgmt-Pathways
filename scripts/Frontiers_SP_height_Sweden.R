@@ -382,30 +382,58 @@ dfUncert <- dfUncert %>% dplyr::mutate(
 summary(dfUncert)
 hist(dfUncert$uncertainty)
 
-# convert to spatial
-spP <- dfUncert
-coordinates(spP) <- ~ Long + Lat
-
-# define lat long crs
-proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-
-# transform points to utm
-spP <- spTransform(spP, CRSobj = utm)
-
-rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
-
-rstUncert <- rasterize(spP, rstUTM, spP$uncertainty, fun=max, na.rm=TRUE)
-
-spplot(rstUncert)
 library(classInt)
-breaks.qt <- classIntervals(dfUncert$uncertainty, n = 40, style = "sd", intervalClosure = "right")
-spplot(rstUncert, at = breaks.qt$brks)
+breaks.qt <- classIntervals(dfUncert$uncertainty, n = 40, style = "pretty", intervalClosure = "right")
 
-hist(rstUncert)
+lstGCMs <- unique(dfUncert$GCM)
 
-writeRaster(rstUncert, paste0(dirOut,"PrHeightLocal_uncertainty.tif"),overwrite=TRUE)
+for (gcm in lstGCMs){
+  
+  #gcm <- lstGCMs[1]
+  dfGCM <- dfUncert %>% filter(GCM==gcm)
+  
+  # convert to spatial
+  spP <- dfGCM
+  coordinates(spP) <- ~ Long + Lat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  rstUncert <- rasterize(spP, rstUTM, spP$uncertainty, fun=max, na.rm=TRUE)
+  
+  sp1 <- spplot(rstUncert, at = breaks.qt$brks)
+  
+  png(paste0(dirFigs,"PrHeightLocal_",gcm,"_uncertainty.png"), units="cm", width = 20, height = 20, res=1000)
+  print(sp1)
+  dev.off()
+  
+  writeRaster(rstUncert, paste0(dirOut,"PrHeightLocal_",gcm,"_uncertainty.tif"),overwrite=TRUE)
+  
+  
+}
 
+rsts3 <-  list.files(dirOut,pattern = "*.tif", full.names = T)
+stackUncertainty <- stack(rsts3)
+names(stackUncertainty) <- lstGCMs
 
+png(paste0(dirFigs,"PrHeightLocal_uncertainty_per_GCM.png"), units="cm", width = 20, height = 15, res=1000)
+spplot(stackUncertainty)
+dev.off()
+
+png(paste0(dirFigs,"PrHeightLocal_uncertainty_dist_per_GCM.png"), units="cm", width = 15, height = 10, res=1000)
+ggplot(dfUncert)+
+  geom_histogram(aes(uncertainty), bins = 100)+
+  facet_wrap(~GCM)+
+  xlab("Uncertainty (%)")+
+  theme_bw()
+dev.off()
+
+nrow(dfUncert %>% filter(uncertainty>100))
 
 ### calculate CoV --------------------------------------------------------------
 
