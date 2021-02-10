@@ -9,7 +9,7 @@
 library(dplyr)
 library(sf)
 library(sp)
-library(plyr)
+#library(plyr)
 library(reshape2)
 library(gridExtra)
 library(resample)
@@ -19,6 +19,8 @@ library(EnvStats)
 library(ggplot2)
 library(rnaturalearth)
 library(tidyverse)
+library(raster)
+library(viridis)
 
 ### dirs -----------------------------------------------------------------------
 
@@ -63,6 +65,7 @@ dfPredictions$RCP <- ifelse(grepl("45in50", dfPredictions$scenario), '4.5',
 
 
 write.csv(dfPredictions, paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"), row.names = F)
+
 dfPredictions <- read.csv(paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"))
 
 ### density distributions per GCM ----------------------------------------------
@@ -112,6 +115,7 @@ ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightLocal_boxplots_20
 #}
 
 #outliers.50[[4]]
+
 
 ### calculate z-scores and plot ------------------------------------------------
 
@@ -164,9 +168,6 @@ for (s in RCP_GCMs){
 ### rasterize Z-score per RCP-GCM + plot agreement? ----------------------------
 
 # Not sure how useful this is...
-
-library(raster)
-library(viridis)
 
 # for utm crs
 sfSeedZones <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
@@ -343,15 +344,67 @@ spplot(stackHeight8.5)
 
 stackDiff <- stackHeight8.5 - stackHeight4.5
 spplot(stackDiff)
-rstAvg <- mean(stackHeight4.5,stackHeight8.5)
-spplot(rstAvg)
+names(stackDiff)
+#rstAvg <- mean(stackHeight4.5,stackHeight8.5)
+#spplot(rstAvg)
+stackAvg <- stack()
+for (i in 1:5){
+  rstAvg <- mean(stackHeight4.5[[i]],stackHeight8.5[[i]])
+  stackAvg <- addLayer(stackAvg, rstAvg)
+}
+names(stackAvg) <- c("bc","he","mg","mi","no")
+spplot(stackAvg)
 
-rstUncert <- stackDiff/rstAvg * 100
+rstUncert <- stackDiff/stackAvg * 100
 spplot(rstUncert)
+# why getting negative values?
 
-fig1 <- stack(prodIdxSOh60_45,prodIdxSOh60_85,avg,uncertainty)
-names(fig1) <- c("RCP4.5","RCP8.5","Mean","Uncertainty")
-plot(fig1)
+# check using dataframe
+df45 <- dfPredictions[,c("CenterLat","CenterLong","RCP","GCM","PrHeightLocal")] %>% 
+  filter(RCP=="4.5")
+df85 <- dfPredictions[,c("CenterLat","CenterLong","RCP","GCM","PrHeightLocal")] %>% 
+  filter(RCP=="8.5")
+
+dfUncert <- cbind(df45[,c(1,2,4,5)],df85$PrHeightLocal)
+head(dfUncert)
+colnames(dfUncert) <- c("Lat","Long","GCM","height45","height85")
+
+# negative values occur when rcp85 pred is less than rcp45 pred 
+# (when just calculating difference as rcp85 - rcp45)
+# below I've added a conditon to always subtract the smaller value from the larger
+# so that we just get one + measure of uncertainty %
+
+dfUncert <- dfUncert %>% dplyr::mutate(
+  heightDiff = ifelse(height85 > height45, height85 - height45, height45 - height85),
+  heightMean = rowMeans(dplyr::select(.,height45:height85)),
+  uncertainty = heightDiff/heightMean*100)
+
+summary(dfUncert)
+hist(dfUncert$uncertainty)
+
+# convert to spatial
+spP <- dfUncert
+coordinates(spP) <- ~ Long + Lat
+
+# define lat long crs
+proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+
+# transform points to utm
+spP <- spTransform(spP, CRSobj = utm)
+
+rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+
+rstUncert <- rasterize(spP, rstUTM, spP$uncertainty, fun=max, na.rm=TRUE)
+
+spplot(rstUncert)
+library(classInt)
+breaks.qt <- classIntervals(dfUncert$uncertainty, n = 40, style = "sd", intervalClosure = "right")
+spplot(rstUncert, at = breaks.qt$brks)
+
+hist(rstUncert)
+
+writeRaster(rstUncert, paste0(dirOut,"PrHeightLocal_uncertainty.tif"),overwrite=TRUE)
+
 
 
 ### calculate CoV --------------------------------------------------------------
