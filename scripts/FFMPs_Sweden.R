@@ -52,6 +52,20 @@ sfSeedZones$ZON2 <- factor(sfSeedZones$ZON2, ordered = TRUE, levels = zoneOrder)
 ggplot(sfSeedZones)+
   geom_sf(aes(fill=ZON2),col=NA)+theme_minimal()
 
+# load country outline
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+sweden <- worldmap[worldmap$name == 'Sweden',]
+
+png(paste0(wd,"/figures/seed_zones_all.png"), width = 500, height = 600)
+ggplot()+
+  geom_sf(data = sweden)+
+  geom_sf(data=sfSeedZones, aes(fill=ZON2), colour=0)+
+  #scale_fill_manual(values = SZcols)+
+  theme_minimal()+
+  labs(fill = "Seed Zone")
+dev.off()
+
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
 
@@ -151,6 +165,8 @@ files
 refClimate <- read.csv(files[13])
 head(refClimate)
 
+# (created ref climate rasters in another script - they exist in the same folder now)
+
 ### read in rasters as stacks and extract values to seed zones -----------------
 
 dirInputRasters <- paste0(dirOut,"pred_rst")
@@ -228,6 +244,11 @@ dfSeedZones <- dfSeedZones %>%
 
 write.csv(dfSeedZones, paste0(dirOut, "HeightSO60_raster_seedZone_stats.csv"),row.names = F)
 
+dfSeedZones <- read.csv(paste0(dirOut, "HeightSO60_raster_seedZone_stats.csv"))
+head(dfSeedZones)
+dfSeedZones$ZON2 <- factor(dfSeedZones$ZON2, ordered = TRUE, levels = zoneOrder)
+
+
 limits <- aes(ymin=lwr,ymax=upr)
 
 scenarios <- unique(dfSeedZones$GCM)
@@ -284,6 +305,102 @@ ggplot(df85, aes(x=GCM,y=mean, color=GCM))+
   #geom_point()+
   #facet_wrap(~ZON2)
 
+### traffic lights -------------------------------------------------------------
+
+summary(dfSeedZones)
+
+# lets say threshold of 1500mm
+
+dfSeedZones$trafficLight <- NA
+dfSeedZones$trafficLight[which(dfSeedZones$min>=1500 & dfSeedZones$mean>=1500 & dfSeedZones$max>=1500)]<-"green"
+dfSeedZones$trafficLight[which(dfSeedZones$min<1500)] <- "yellow"
+dfSeedZones$trafficLight[which(dfSeedZones$mean<1500)] <- "orange"
+dfSeedZones$trafficLight[which(dfSeedZones$max<1500)] <- "red"
+
+dfSeedZones$trafficLight <- factor(dfSeedZones$trafficLight, ordered = T,
+                                   levels = c("green","yellow","orange","red"))
+
+dfSeedZones$GCM2 <- ifelse(grepl("bc", dfSeedZones$GCM), 'bc - BCC-CSM1-1',
+                            ifelse(grepl("he", dfSeedZones$GCM), 'he - HadGEM2-ES',
+                                   ifelse(grepl("mg", dfSeedZones$GCM), 'mg - MRI-CGCM3',
+                                          ifelse(grepl("mi", dfSeedZones$GCM), 'mi - MIROC-ESM-CHEM',
+                                                 ifelse(grepl("no", dfSeedZones$GCM), 'no - NorESM1-M', 'GCM_all')))))
+dfSeedZones$RCP <- ifelse(grepl("45in50", dfSeedZones$GCM), '4.5',
+                            ifelse(grepl("85in50", dfSeedZones$GCM), '8.5', 'RCP_all'))
+
+ggplot(dfSeedZones)+
+  geom_point(aes(GCM2,trafficLight,col=trafficLight))+
+  scale_color_brewer(palette = "RdYlGn", direction = -1)+
+  theme_bw()+
+  facet_grid(ZON2~RCP)+
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.x = element_text(angle = 90))
+
+
+# needs to simplify...
+
+head(dfSeedZones)
+dfSeedZones$seedOrchard <- "SO_lat60"
+
+dfGCM <- dfSeedZones %>% 
+  group_by(ZON2,RCP) %>% 
+  filter(min>=1500) %>% 
+  summarise(n_GCM_min = length(unique(GCM)))#,
+            #n_GCM_mean = length(unique(GCM)),
+            #n_GCM_max = length(unique(GCM)))
+head(dfGCM)
+
+#dfGCM <- dfGCM %>% ungroup() %>%  dplyr::mutate(tot = rowSums(.[3:5]))
+
+dfGCM <- dfGCM %>% ungroup()
+dfGCM$trafficLight <- NA
+#dfGCM$trafficLight[which(dfGCM$tot==15)] <- "Most likely"
+#dfGCM$trafficLight[which(dfGCM$tot>=9 & dfGCM$tot<15)] <- "More likely than not"
+dfGCM$trafficLight[which(dfGCM$n_GCM_min==5)] <- "All GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM_min==4)] <- "4 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM_min==3)] <- "3 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM_min==2)] <- "2 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM_min==1)] <- "1 GCM"
+
+dfGCM$trafficLight <- factor(dfGCM$trafficLight, ordered = T,
+                                   levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM"))
+
+
+dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=rev(zoneOrder))
+dfGCM$seedZone <- "SO_lat60"
+
+ggplot(dfGCM)+
+  geom_point(aes(seedZone,trafficLight,col=trafficLight))+
+  scale_color_brewer(palette = "RdYlGn", direction = -1)+
+  coord_flip()+
+  theme_bw()+
+  facet_grid(ZON2~RCP)+
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.x = element_text(angle = 90))
+
+# this is getting there!
+ggplot(dfGCM)+
+  geom_tile(aes(ZON2,RCP, fill=trafficLight))+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  coord_flip()+
+  theme_bw()+
+  ylab("RCP")+xlab("Seed zone")+
+  ggtitle("Likelihood of SOl60 height above 1500mm per seed zone")+
+  labs(fill="Likelihood")
+
+#library(robvis)
+#rob_traffic_light(data = data_rob2, tool = "ROB2")
+# check structure to see how to reproduce
+#head(data_rob2)
+
+# so domains would be RCPs in my case, with traffic light as the value
+#dfTraffic <- dfGCM[,-3] %>% pivot_wider(names_from = RCP, values_from = trafficLight)
+
+#rob_traffic_light(data = dfTraffic, tool = "ROB2")
 
 ### gcm spatial uncertainty ----------------------------------------------------
 
