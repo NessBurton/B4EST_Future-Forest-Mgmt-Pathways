@@ -398,6 +398,19 @@ ggplot(dfGCM)+
   ggtitle("Likelihood of SOl60 height above 1500mm per seed zone")+
   labs(fill="Likelihood")
 
+# could join back & plot spatially
+dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=zoneOrder)
+
+sfSeedZones <- left_join(sfSeedZones,dfGCM,by="ZON2")
+
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones, aes(fill=trafficLight), colour=0)+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  facet_wrap(~RCP)+
+  theme_bw()+
+  labs(fill = "Likelihood height > 1500mm")
+
 #library(robvis)
 #rob_traffic_light(data = data_rob2, tool = "ROB2")
 # check structure to see how to reproduce
