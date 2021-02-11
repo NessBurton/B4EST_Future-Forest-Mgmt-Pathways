@@ -97,6 +97,35 @@ for(i in GCMs) {
 GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
 ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightLocal_boxplots_2050.png"), width=21, height=5, dpi=300)
 
+# plot distribution of difference between ref local height and future local height
+
+dfReference <- read.csv(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+
+dfPredictions <- left_join(dfPredictions, dfReference[,c("GridID","PrHeightLocal")], by = "GridID")
+colnames(dfPredictions)[5] <- "PrHeightLocal"
+colnames(dfPredictions)[14] <- "RefHeight"
+
+# calculate difference
+dfPredictions <- dfPredictions %>% mutate(HeightDiff = PrHeightLocal - RefHeight)
+dfPredictions$RCP <- factor(dfPredictions$RCP)
+
+g2 <- dfPredictions %>% 
+  ggplot(aes(RCP,HeightDiff, fill=RCP))+
+  geom_boxplot()+
+  facet_wrap(~GCM, ncol = 5)+
+  stat_summary(fun=mean, geom="point", color="red", size=4) +   # plot the mean as a red dot
+  #scale_y_continuous(limits = c(0, 600)) +
+  xlab("RCP scenario") +
+  ylab("Height change from reference") +
+  theme_bw() + 
+  #ggtitle(i) + 
+  theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
+        axis.title.x = element_text(size = 18, face = "bold"), 
+        axis.title.y = element_text(size = 18, face = "bold"),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        strip.text.x = element_text(size = 16, face="bold"))
+ggsave(g2, file=paste0(dirFigs,"GCM_RCP_height_change_from_ref_boxplots_2050.png"), width=21, height=5, dpi=300)
 
 
 ### identify outliers across all RCPs and GCMs ---------------------------------
