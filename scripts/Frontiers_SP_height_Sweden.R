@@ -318,9 +318,9 @@ for (rcp in lstRCP){
   spplot(heightStack)
   
   # threshold reclass
-  # lets say height above 1500 m
+  # lets say height above 1000 m
   # reclass matrix
-  rules2 <- c(0, 1500, 0,  1500, 2500, 1)
+  rules2 <- c(0, 1000, 0,  1000, 2500, 1)
   rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
   rclassStack <- reclassify(heightStack,rcl2)
   #spplot(rclassStack)
@@ -343,14 +343,14 @@ for (rcp in lstRCP){
   contour1$agreement <- factor(contour1$agreement)
   contour1 <- st_cast(contour1, to="POLYGON")
   
-  plot.title <- paste0("Local provenance in 2050 ",rcp.name,": height > 1500mm")
+  plot.title <- paste0("Local provenance in 2050 ",rcp.name,": height > 1000mm")
   g1 <- ggplot()+
     geom_sf(data = sweden, fill=NA)+
     geom_sf(data=contour1,aes(fill=agreement),col=NA)+
     scale_fill_viridis(discrete = T, option = "C")+
     ggtitle(plot.title)+
     theme_bw()
-  png(paste0(dirFigs,"GCM_agreement_localProv_height_over_1500_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
+  png(paste0(dirFigs,"GCM_agreement_localProv_height_over_1000_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
   print(g1)
   dev.off()
   
