@@ -57,12 +57,18 @@ worldmap <- ne_countries(scale = 'medium', type = 'map_units',
                          returnclass = 'sf')
 sweden <- worldmap[worldmap$name == 'Sweden',]
 
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- length(unique(sfSeedZones$ZON2))
+mycolors <- colorRampPalette(brewer.pal(12, "Paired"))(nb.cols)
+
 png(paste0(wd,"/figures/seed_zones_all.png"), width = 500, height = 600)
 ggplot()+
-  geom_sf(data = sweden)+
+  geom_sf(data = sweden, fill=NA)+
   geom_sf(data=sfSeedZones, aes(fill=ZON2), colour=0)+
-  #scale_fill_manual(values = SZcols)+
-  theme_minimal()+
+  #scale_fill_brewer(palette = "Paired")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw()+
   labs(fill = "Seed Zone")
 dev.off()
 
