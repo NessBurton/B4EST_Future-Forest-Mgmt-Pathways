@@ -184,17 +184,21 @@ lstVars <- c("PrHeightSOh60","PrHeightSOh62","PrHeightSOh64","PrHeightSOh66",
              "PrSurvSOh60","PrSurvSOh62","PrSurvSOh64","PrSurvSOh66",
              "PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66")
 
+dfMaster <- tibble()
+
 for (var in lstVars){
   
+  #var <- lstVars[1]
+  print(paste0("Processing for var: ", var))
   # just select per seed orchard & var
-  heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
+  rstsVar <- grep(var, tifs, value=TRUE)
   #heightSO <- grep("85in50", heightSO, value=TRUE)
-  heightSO <- grep("thresholds", heightSO, value=TRUE)
+  rstsVar <- grep("thresholds", rstsVar, value=TRUE)
   #heightSO <- heightSO[-3] # remove mean
   
   # read all scenarios in as stack
-  heightSOstack <- do.call(stack, lapply(heightSO, raster))
-  spplot(heightSOstack)
+  varStack <- do.call(stack, lapply(rstsVar, raster))
+  spplot(varStack)
   
   # loop to calculate stats per seed zone
   
@@ -206,9 +210,11 @@ for (var in lstVars){
     
     #f <- funcs[1] # for testing
     
-    dfValues <- extract(heightSOstack, spSeedZones, fun=f, df=TRUE, na.rm=TRUE)
+    print(paste0("Extracting for function: ", f))
+    
+    dfValues <- extract(varStack, spSeedZones, fun=f, df=TRUE, na.rm=TRUE)
     dfValues$ZON2 <- zoneOrder
-    dfValues <- dfValues %>% pivot_longer(cols = 2:13, names_to="fileName",values_to=f)
+    dfValues <- dfValues %>% pivot_longer(cols = 2:14, names_to="fileName",values_to=f)
     
     #dfValues$GCM <- substring(dfValues$fileName,15,22)
     for (i in 1:nrow(dfValues)){
@@ -224,10 +230,12 @@ for (var in lstVars){
   }
   
   head(dfSeedZones)
-  dfSeedZones <- dfSeedZones[,c(1,2,3,6,9,12)]
-  
+  dfSeedZones$var <- var
+  dfMaster <- rbind(dfMaster,dfSeedZones)
   
 }
+
+head(dfMaster)
 
 sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
 
