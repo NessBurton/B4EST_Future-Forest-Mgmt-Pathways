@@ -236,8 +236,12 @@ for (var in lstVars){
 }
 
 head(dfMaster)
+summary(dfMaster)
+dfMaster <- dfMaster[,-c(4,5,7,8,10,11)]
+write.csv(dfMaster, paste0(dirOut,"Seed_Zones_stats_all.csv"),row.names = F)
 
-sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
+# following code worked with one var at a time, needs tweaking to work with dfMaster
+sfSeedZones <- left_join(sfSeedZones,dfMaster,by="ZON2")
 
 ggplot(sfSeedZones)+
   geom_sf(aes(fill=mean),col=NA)+
@@ -364,13 +368,37 @@ ggplot(dfSeedZones)+
 
 
 # needs to simplify...
+dfMaster <- read.csv(paste0(dirOut,"Seed_Zones_stats_all.csv"))
+head(dfMaster)
+#dfSeedZones$seedOrchard <- "SO_lat60"
+dfMaster$GCM2 <- ifelse(grepl("bc", dfMaster$GCM), 'bc - BCC-CSM1-1',
+                           ifelse(grepl("he", dfMaster$GCM), 'he - HadGEM2-ES',
+                                  ifelse(grepl("mg", dfMaster$GCM), 'mg - MRI-CGCM3',
+                                         ifelse(grepl("mi", dfMaster$GCM), 'mi - MIROC-ESM-CHEM',
+                                                ifelse(grepl("no", dfMaster$GCM), 'no - NorESM1-M',
+                                                       ifelse(grepl("Ref", dfMaster$GCM), "Baseline", 'Mean all GCMs'))))))
+dfMaster$RCP <- ifelse(grepl("45in50", dfMaster$GCM), '4.5',
+                          ifelse(grepl("85in50", dfMaster$GCM), '8.5', 'Baseline'))
+dfMaster$seedOrchard <- substr(dfMaster$var, 9,14)
 
-head(dfSeedZones)
-dfSeedZones$seedOrchard <- "SO_lat60"
+dfMaster$ZON2 <- factor(dfMaster$ZON2, ordered = T, levels = zoneOrder)
+dfMaster$GCM2 <- factor(dfMaster$GCM2)
+dfMaster$RCP <- factor(dfMaster$RCP)
+dfMaster$seedOrchard <- factor(dfMaster$seedOrchard)
 
-dfGCM <- dfSeedZones %>% 
-  group_by(ZON2,RCP) %>% 
-  filter(min>=1500) %>% 
+# make NAs/inf proper NA (assume where no prediction has been made due to threshold cutoffs)
+dfMaster$mean[which(is.na(dfMaster$mean))] <- NA
+dfMaster$min[which(is.infinite(dfMaster$min))] <- NA
+dfMaster$max[which(is.infinite(dfMaster$max))] <- NA
+dfMaster$sd[which(is.na(dfMaster$sd))] <- NA
+
+#
+dfGCM <- dfMaster %>%
+  filter(var %in% c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66")==TRUE) %>% 
+  filter(RCP %in% c("Baseline")==FALSE) %>% 
+  filter(GCM2 %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
+  filter(mean>=120) %>% 
+  group_by(ZON2,RCP,seedOrchard) %>% 
   summarise(n_GCM_min = length(unique(GCM)))#,
             #n_GCM_mean = length(unique(GCM)),
             #n_GCM_max = length(unique(GCM)))
@@ -392,28 +420,30 @@ dfGCM$trafficLight <- factor(dfGCM$trafficLight, ordered = T,
                                    levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM"))
 
 
-dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=rev(zoneOrder))
-dfGCM$seedZone <- "SO_lat60"
+#dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=rev(zoneOrder))
+#dfGCM$seedZone <- "SO_lat60"
 
-ggplot(dfGCM)+
-  geom_point(aes(seedZone,trafficLight,col=trafficLight))+
-  scale_color_brewer(palette = "RdYlGn", direction = -1)+
-  coord_flip()+
-  theme_bw()+
-  facet_grid(ZON2~RCP)+
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.x = element_text(angle = 90))
+#ggplot(dfGCM)+
+  #geom_point(aes(seedOrchard,trafficLight,col=trafficLight))+
+  #scale_color_brewer(palette = "RdYlGn", direction = -1)+
+  #coord_flip()+
+  #theme_bw()+
+  #facet_grid(ZON2~RCP)+
+  #theme(axis.title.y = element_blank(),
+        #axis.text.y = element_blank(),
+        #axis.ticks.y = element_blank(),
+        #axis.text.x = element_text(angle = 90))
 
+head(dfGCM)
 # this is getting there!
 ggplot(dfGCM)+
-  geom_tile(aes(ZON2,RCP, fill=trafficLight))+
+  geom_tile(aes(seedOrchard,RCP, fill=trafficLight))+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
   coord_flip()+
+  facet_wrap(~ZON2, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed zone")+
-  ggtitle("Likelihood of SOl60 height above 1500mm per seed zone")+
+  #ggtitle("Likelihood of SOl60 height above 1500mm per seed zone")+
   labs(fill="Likelihood")
 
 # could join back & plot spatially
