@@ -67,6 +67,8 @@ dfPredictions$RCP <- ifelse(grepl("45in50", dfPredictions$scenario), '4.5',
 write.csv(dfPredictions, paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"), row.names = F)
 
 dfPredictions <- read.csv(paste0(dirOut, "AllHeightPredictions_plus_Zscore.csv"))
+dfPredictions$GCM <- factor(dfPredictions$GCM)
+dfPredictions$RCP <- factor(dfPredictions$RCP)
 
 ### density distributions per GCM ----------------------------------------------
 
@@ -79,7 +81,7 @@ for(i in GCMs) {
     stat_summary(fun=mean, geom="point", color="red", size=4) +   # plot the mean as a red dot
     scale_y_continuous(limits = c(0, 2000)) +
     xlab("RCP scenario") +
-    ylab("Data distribution") +
+    ylab("Height distribution (cm)") +
     theme_bw() + 
     ggtitle(i) + 
     theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
@@ -100,6 +102,8 @@ ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightLocal_boxplots_20
 # plot distribution of difference between ref local height and future local height
 
 dfReference <- read.csv(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+summary(dfReference$PrHeightLocal)
+# mean height for reference period is 972cm - use as threshold later
 
 dfPredictions <- left_join(dfPredictions, dfReference[,c("GridID","PrHeightLocal")], by = "GridID")
 colnames(dfPredictions)[5] <- "PrHeightLocal"
@@ -116,7 +120,7 @@ g2 <- dfPredictions %>%
   stat_summary(fun=mean, geom="point", color="red", size=4) +   # plot the mean as a red dot
   #scale_y_continuous(limits = c(0, 600)) +
   xlab("RCP scenario") +
-  ylab("Height change from reference") +
+  ylab("Height change (cm) from reference") +
   theme_bw() + 
   #ggtitle(i) + 
   theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
@@ -318,9 +322,9 @@ for (rcp in lstRCP){
   spplot(heightStack)
   
   # threshold reclass
-  # lets say height above 1000 m
+  # height above 972cm (mean height for reference period)
   # reclass matrix
-  rules2 <- c(0, 1000, 0,  1000, 2500, 1)
+  rules2 <- c(0, 972, 0,  972, 2500, 1)
   rcl2 <- matrix(rules2, ncol=3, byrow=TRUE)
   rclassStack <- reclassify(heightStack,rcl2)
   #spplot(rclassStack)
@@ -343,14 +347,14 @@ for (rcp in lstRCP){
   contour1$agreement <- factor(contour1$agreement)
   contour1 <- st_cast(contour1, to="POLYGON")
   
-  plot.title <- paste0("Local provenance in 2050 ",rcp.name,": height > 1000mm")
+  plot.title <- paste0("Local provenance in 2050 ",rcp.name,": height > 972cm")
   g1 <- ggplot()+
     geom_sf(data = sweden, fill=NA)+
     geom_sf(data=contour1,aes(fill=agreement),col=NA)+
     scale_fill_viridis(discrete = T, option = "C")+
     ggtitle(plot.title)+
     theme_bw()
-  png(paste0(dirFigs,"GCM_agreement_localProv_height_over_1000_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
+  png(paste0(dirFigs,"GCM_agreement_localProv_height_over_refMean_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
   print(g1)
   dev.off()
   
