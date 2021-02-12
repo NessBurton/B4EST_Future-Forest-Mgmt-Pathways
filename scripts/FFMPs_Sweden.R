@@ -62,7 +62,7 @@ library(RColorBrewer)
 nb.cols <- length(unique(sfSeedZones$ZON2))
 mycolors <- colorRampPalette(brewer.pal(12, "Paired"))(nb.cols)
 
-png(paste0(wd,"/figures/seed_zones_all.png"), width = 500, height = 600)
+#png(paste0(wd,"/figures/seed_zones_all.png"), width = 500, height = 600)
 ggplot()+
   geom_sf(data = sweden, fill=NA)+
   geom_sf(data=sfSeedZones, aes(fill=ZON2), colour=0)+
@@ -70,7 +70,7 @@ ggplot()+
   scale_fill_manual(values = mycolors) +
   theme_bw()+
   labs(fill = "Seed Zone")
-dev.off()
+#dev.off()
 
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
@@ -179,45 +179,55 @@ dirInputRasters <- paste0(dirOut,"pred_rst")
 
 # list tifs
 tifs <- list.files(paste0(dirInputRasters), full.names = TRUE)
-# just select per seed orchard & var
-heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
-#heightSO <- grep("85in50", heightSO, value=TRUE)
-heightSO <- grep("thresholds", heightSO, value=TRUE)
-#heightSO <- heightSO[-3] # remove mean
+# list variables (either height, survival, or production index) per seed orchard
+lstVars <- c("PrHeightSOh60","PrHeightSOh62","PrHeightSOh64","PrHeightSOh66",
+             "PrSurvSOh60","PrSurvSOh62","PrSurvSOh64","PrSurvSOh66",
+             "PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66")
 
-# read all scenarios in as stack
-heightSOstack <- do.call(stack, lapply(heightSO, raster))
-spplot(heightSOstack)
-
-# loop to calculate stats per seed zone
-
-funcs <- c("mean","sd","min","max")
-
-dfSeedZones <- data.frame()
-
-for (f in funcs){
+for (var in lstVars){
   
-  #f <- funcs[1] # for testing
+  # just select per seed orchard & var
+  heightSO <- grep("PrHeightSOh60", tifs, value=TRUE)
+  #heightSO <- grep("85in50", heightSO, value=TRUE)
+  heightSO <- grep("thresholds", heightSO, value=TRUE)
+  #heightSO <- heightSO[-3] # remove mean
   
-  dfValues <- extract(heightSOstack, spSeedZones, fun=f, df=TRUE, na.rm=TRUE)
-  dfValues$ZON2 <- zoneOrder
-  dfValues <- dfValues %>% pivot_longer(cols = 2:13, names_to="fileName",values_to=f)
+  # read all scenarios in as stack
+  heightSOstack <- do.call(stack, lapply(heightSO, raster))
+  spplot(heightSOstack)
   
-  #dfValues$GCM <- substring(dfValues$fileName,15,22)
-  for (i in 1:nrow(dfValues)){
-    dfValues$GCM[i] <- strsplit(dfValues$fileName[i], "[_]")[[1]][2]
-  }
+  # loop to calculate stats per seed zone
   
-  if(f=="mean"){
-    dfSeedZones <- rbind(dfSeedZones,dfValues[,c(2,5,4)])
-  }else{
+  funcs <- c("mean","sd","min","max")
+  
+  dfSeedZones <- data.frame()
+  
+  for (f in funcs){
+    
+    #f <- funcs[1] # for testing
+    
+    dfValues <- extract(heightSOstack, spSeedZones, fun=f, df=TRUE, na.rm=TRUE)
+    dfValues$ZON2 <- zoneOrder
+    dfValues <- dfValues %>% pivot_longer(cols = 2:13, names_to="fileName",values_to=f)
+    
+    #dfValues$GCM <- substring(dfValues$fileName,15,22)
+    for (i in 1:nrow(dfValues)){
+      dfValues$GCM[i] <- strsplit(dfValues$fileName[i], "[_]")[[1]][2]
+    }
+    
+    if(f=="mean"){
+      dfSeedZones <- rbind(dfSeedZones,dfValues[,c(2,5,4)])
+    }else{
       dfSeedZones <- left_join(dfSeedZones,dfValues,by=c("ZON2","GCM"))
     }
+    
+  }
+  
+  head(dfSeedZones)
+  dfSeedZones <- dfSeedZones[,c(1,2,3,6,9,12)]
+  
   
 }
-
-head(dfSeedZones)
-dfSeedZones <- dfSeedZones[,c(1,2,3,6,9,12)]
 
 sfSeedZones <- left_join(sfSeedZones,dfSeedZones,by="ZON2")
 
