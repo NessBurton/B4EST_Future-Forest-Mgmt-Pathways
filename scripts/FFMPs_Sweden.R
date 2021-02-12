@@ -397,42 +397,25 @@ dfGCM <- dfMaster %>%
   filter(var %in% c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66")==TRUE) %>% 
   filter(RCP %in% c("Baseline")==FALSE) %>% 
   filter(GCM2 %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
-  filter(mean>=120) %>% 
   group_by(ZON2,RCP,seedOrchard) %>% 
-  summarise(n_GCM_min = length(unique(GCM)))#,
-            #n_GCM_mean = length(unique(GCM)),
-            #n_GCM_max = length(unique(GCM)))
+  #filter(mean>=120) %>% # need to change how filtered here to make sure there is a record of where no GCMs predict this
+  summarise(n_GCM = if(mean>=120){length(unique(GCM))}else{0}) # needs further thought
 head(dfGCM)
 
 #dfGCM <- dfGCM %>% ungroup() %>%  dplyr::mutate(tot = rowSums(.[3:5]))
 
 dfGCM <- dfGCM %>% ungroup()
 dfGCM$trafficLight <- NA
-#dfGCM$trafficLight[which(dfGCM$tot==15)] <- "Most likely"
-#dfGCM$trafficLight[which(dfGCM$tot>=9 & dfGCM$tot<15)] <- "More likely than not"
-dfGCM$trafficLight[which(dfGCM$n_GCM_min==5)] <- "All GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM_min==4)] <- "4 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM_min==3)] <- "3 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM_min==2)] <- "2 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM_min==1)] <- "1 GCM"
+dfGCM$trafficLight[which(dfGCM$n_GCM==5)] <- "All GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM==4)] <- "4 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM==3)] <- "3 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM==2)] <- "2 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_GCM==1)] <- "1 GCM"
+dfGCM$trafficLight[which(dfGCM$n_GCM<1)] <- "No GCMs"
 
 dfGCM$trafficLight <- factor(dfGCM$trafficLight, ordered = T,
                                    levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM"))
 
-
-#dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=rev(zoneOrder))
-#dfGCM$seedZone <- "SO_lat60"
-
-#ggplot(dfGCM)+
-  #geom_point(aes(seedOrchard,trafficLight,col=trafficLight))+
-  #scale_color_brewer(palette = "RdYlGn", direction = -1)+
-  #coord_flip()+
-  #theme_bw()+
-  #facet_grid(ZON2~RCP)+
-  #theme(axis.title.y = element_blank(),
-        #axis.text.y = element_blank(),
-        #axis.ticks.y = element_blank(),
-        #axis.text.x = element_text(angle = 90))
 
 head(dfGCM)
 # this is getting there!
@@ -443,8 +426,9 @@ ggplot(dfGCM)+
   facet_wrap(~ZON2, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed zone")+
-  #ggtitle("Likelihood of SOl60 height above 1500mm per seed zone")+
+  ggtitle("Likelihood of Performance above 100 per seed zone")+
   labs(fill="Likelihood")
+# add another "No GCMs" option? Or leave blank
 
 # could join back & plot spatially
 dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=zoneOrder)
