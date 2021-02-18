@@ -392,43 +392,52 @@ dfMaster$min[which(is.infinite(dfMaster$min))] <- NA
 dfMaster$max[which(is.infinite(dfMaster$max))] <- NA
 dfMaster$sd[which(is.na(dfMaster$sd))] <- NA
 
+head(dfMaster)
+
 #
+#library(expss)
 dfGCM <- dfMaster %>%
   filter(var %in% c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66")==TRUE) %>% 
   filter(RCP %in% c("Baseline")==FALSE) %>% 
   filter(GCM2 %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
   group_by(ZON2,RCP,seedOrchard) %>% 
-  #filter(mean>=120) %>% # need to change how filtered here to make sure there is a record of where no GCMs predict this
-  summarise(n_GCM = if(mean>=120){length(unique(GCM))}else{0}) # needs further thought
+  summarise(n_GCMs = n(),
+            n_m120 = sum(mean > 110),
+            #n_m120 = sum(max > 120),
+            p_m120 = n_m120 / n_GCMs*100)
+
 head(dfGCM)
+dfGCM$seedOrchard <- substring(dfGCM$seedOrchard, 2,6)
 
 #dfGCM <- dfGCM %>% ungroup() %>%  dplyr::mutate(tot = rowSums(.[3:5]))
 
 dfGCM <- dfGCM %>% ungroup()
 dfGCM$trafficLight <- NA
-dfGCM$trafficLight[which(dfGCM$n_GCM==5)] <- "All GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM==4)] <- "4 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM==3)] <- "3 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM==2)] <- "2 GCMs"
-dfGCM$trafficLight[which(dfGCM$n_GCM==1)] <- "1 GCM"
-dfGCM$trafficLight[which(dfGCM$n_GCM<1)] <- "No GCMs"
+dfGCM$trafficLight[which(dfGCM$n_m120==5)] <- "All GCMs"
+dfGCM$trafficLight[which(dfGCM$n_m120==4)] <- "4 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_m120==3)] <- "3 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_m120==2)] <- "2 GCMs"
+dfGCM$trafficLight[which(dfGCM$n_m120==1)] <- "1 GCM"
+dfGCM$trafficLight[which(dfGCM$n_m120==0)] <- "No GCMs"
+dfGCM$trafficLight[which(is.na(dfGCM$n_m120))] <- "No Data"
 
 dfGCM$trafficLight <- factor(dfGCM$trafficLight, ordered = T,
-                                   levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM"))
+                                   levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","No Data"))
 
 
 head(dfGCM)
 # this is getting there!
+png(paste0(wd,"/figures/SO_mean_performance_above_120_2050.png"), width = 600, height = 800)
 ggplot(dfGCM)+
   geom_tile(aes(seedOrchard,RCP, fill=trafficLight))+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
   coord_flip()+
   facet_wrap(~ZON2, nrow = 11, ncol=2)+
   theme_bw()+
-  ylab("RCP")+xlab("Seed zone")+
-  ggtitle("Likelihood of Performance above 100 per seed zone")+
+  ylab("RCP")+xlab("Seed orchard")+
+  ggtitle("Likelihood of seed orchard performance > 120 in 2050")+
   labs(fill="Likelihood")
-# add another "No GCMs" option? Or leave blank
+dev.off()
 
 # could join back & plot spatially
 dfGCM$ZON2 <- factor(dfGCM$ZON2,ordered = T, levels=zoneOrder)
