@@ -427,7 +427,7 @@ dfGCM$trafficLight <- factor(dfGCM$trafficLight, ordered = T,
 
 head(dfGCM)
 # this is getting there!
-png(paste0(wd,"/figures/SO_mean_performance_above_120_2050.png"), width = 600, height = 800)
+#png(paste0(wd,"/figures/SO_mean_performance_above_120_2050.png"), width = 600, height = 800)
 ggplot(dfGCM)+
   geom_tile(aes(seedOrchard,RCP, fill=trafficLight))+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
