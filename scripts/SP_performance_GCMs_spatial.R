@@ -5,7 +5,8 @@
 
 wd <- "~/FFMPs" # sandbox
 dirData <- paste0(wd,"/data-raw/")
-dirOut <- paste0(wd,"/data-processed/")
+#dirOut <- paste0(wd,"/data-processed/")
+dirOut <- paste0(dataDrive,"/FFMP-data-processed/")
 dirFigs <- paste0(wd,"/figures/")
 
 ### libraries ------------------------------------------------------------------
@@ -94,9 +95,13 @@ for (f in files){
 }
 
 # list production prediction tifs per scenario
-rsts <-  list.files(paste0(dirOut, "ProdIdx_rst/"),pattern = "*.tif",full.names = T)
+rsts <-  list.files(paste0(dirOut, "pred_rst/"),pattern = "*.tif",full.names = T)
+rsts <- grep("PrProdidx",rsts, value = TRUE)
+rsts <- grep("thresholds",rsts, value = TRUE)
+rsts <- rsts[-c(5,6,13,18,19,26,31,32,39,44,45,52)]
 
-# loop to produce plot for each seed orchard
+# nested loop to produce plot for each seed orchard in each RCP
+lstRCP <- c("45","85")
 lstSO <- c("h60","h62","h64","h66")
 
 # sweden outline
@@ -104,72 +109,74 @@ worldmap <- ne_countries(scale = 'medium', type = 'map_units',
                          returnclass = 'sf')
 sweden <- worldmap[worldmap$name == 'Sweden',]
 
-for (SO in lstSO){
+for (i in lstRCP){
   
-  #SO <- lstSO[2]
+  #i <- lstRCP[1]
+  # filter to rcp
+  rstsRCP <- grep(i, rsts, value=TRUE)
   
-  # filter to seed orchard
-  rstsSO <- grep(SO, rsts, value=TRUE)
-  rstsSO <- rstsSO[-c(5:8,15:16)]
-  #rstsSO
-  
-  # raster stack
-  prodIdxStack <- stack(rstsSO)
-  print(spplot(prodIdxStack))
-  print("Seed orchard results per RCP/GCM read in as stack")
-  
-  # threshold reclass
-  # lets say production has to be above 1.2 (20% above local provenance)
+  for (SO in lstSO){
+    
+    #SO <- lstSO[1]
+    
+    # filter to seed orchard
+    rstsSO <- grep(SO, rstsRCP, value=TRUE)
+    
+    # raster stack
+    prodIdxStack <- stack(rstsSO)
+    print(spplot(prodIdxStack))
+    print("Seed orchard results per RCP/GCM read in as stack")
+    
+    # threshold reclass
+    # lets say production has to be above 120 (20% above local provenance)
     # reclass matrix
-  rules1 <- c(-1, 1.2, 0,  1.2, 3, 1)
-  rcl1 <- matrix(rules1, ncol=3, byrow=TRUE)
-  rclassStack <- reclassify(prodIdxStack,rcl1)
-  print("Raster stack reclassified")
-  print(spplot(rclassStack))
+    rules1 <- c(80, 120, 0,  120, 300, 1)
+    rcl1 <- matrix(rules1, ncol=3, byrow=TRUE)
+    rclassStack <- reclassify(prodIdxStack,rcl1)
+    print("Raster stack reclassified")
+    print(spplot(rclassStack))
+    
+    # sum
+    #nlayers(rclassStack)
+    sumStack <- stackApply(rclassStack, indices=1, fun=sum)
+    print("Raster stack summed")
+    spplot(sumStack)
+    
+    # contour
+    contour1 <- rasterToContour(sumStack)
+    contour1 <- st_as_sf(contour1)
+    contour1$level <- as.numeric(contour1$level)
+    contour1$agreement <- NA
+    contour1$agreement[which(contour1$level<=1)]<-"1 GCM"
+    contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 GCMs"
+    contour1$agreement[which(contour1$level<=3&contour1$level>2)]<-"3 GCMs"
+    contour1$agreement[which(contour1$level<=4&contour1$level>3)]<-"4 GCMs"
+    contour1$agreement[which(contour1$level<=5&contour1$level>4)]<-"All GCMs"
+    
+    contour1$agreement <- as.factor(contour1$agreement)
+    
+    # convert from MULTILINESTRING to polygon
+    contour1 <- st_cast(contour1, to="POLYGON")
+    print("Contours calculated")
+    
+    plot.title <- paste0("SO",SO,"-1.5g production index 20% above local provenance (2050) | RCP",i)
+    p1 <- ggplot()+
+      geom_sf(data = sweden)+
+      geom_sf(data=contour1,aes(fill=agreement),col=NA)+
+      scale_fill_viridis(discrete = T, option = "C")+
+      ggtitle(plot.title)+
+      theme_minimal()
+    png(paste0(dirFigs,"GCM_agreement_SO",SO,"_RCP",i,".png"), units="cm", width = 20, height = 20, res=1000)
+    print(p1)
+    dev.off()
+    
+    print(paste0("Plot saved for seed orchard: SO",SO))
+    
+  }
   
-  # sum
-  #nlayers(rclassStack)
-  sumStack <- stackApply(rclassStack, indices=1, fun=sum)
-  print("Raster stack summed")
-  plot(sumStack)
-  
-  # contour
-  contour1 <- rasterToContour(sumStack)
-  contour1 <- st_as_sf(contour1)
-  contour1$level <- as.numeric(contour1$level)
-  contour1$agreement <- NA
-  contour1$agreement[which(contour1$level<=1)]<-"1 scenario"
-  contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 scenarios"
-  contour1$agreement[which(contour1$level<=3&contour1$level>2)]<-"3 scenarios"
-  contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 scenarios"
-  contour1$agreement[which(contour1$level<=4&contour1$level>3)]<-"4 scenarios"
-  contour1$agreement[which(contour1$level<=5&contour1$level>4)]<-"5 scenarios"
-  contour1$agreement[which(contour1$level<=6&contour1$level>5)]<-"6 scenarios"
-  contour1$agreement[which(contour1$level<=7&contour1$level>6)]<-"7 scenarios"
-  contour1$agreement[which(contour1$level<=8&contour1$level>7)]<-"8 scenarios"
-  contour1$agreement[which(contour1$level<=9&contour1$level>8)]<-"9 scenarios"
-  contour1$agreement[which(contour1$level>=10)]<-"All scenarios"
-  
-  contour1$agreement <- as.factor(contour1$agreement)
-  
-  # convert from MULTILINESTRING to polygon
-  contour1 <- st_cast(contour1, to="POLYGON")
-  print("Contours calculated")
-  
-  plot.title <- paste0("SO",SO,"-1.5g production index 20% above local provenance (2050)")
-  p1 <- ggplot()+
-    geom_sf(data = sweden)+
-    geom_sf(data=contour1,aes(fill=agreement),col=NA)+
-    scale_fill_viridis(discrete = T, option = "C")+
-    ggtitle(plot.title)+
-    theme_minimal()
-  png(paste0(dirFigs,"RCP_GCM_scenario_agreement_SO",SO,".png"), units="cm", width = 20, height = 20, res=1000)
-  print(p1)
-  dev.off()
-  
-  print(paste0("Plot saved for seed orchard: SO",SO))
-
 }
+
+
 
 
 
