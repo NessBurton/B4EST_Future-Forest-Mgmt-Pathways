@@ -39,47 +39,101 @@ dfPredictions <- vroom(files2, id="path")
 #spec(dfPredictions)
 names(dfPredictions)
 
-dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong",
+dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong","Country",
                                   "GDD5Future","PrHeightLocal","PrHeightMeanLat")]
 
-dfPredictions <- dfPredictions %>% mutate(file = stringr::str_split(path, fixed("_"))[[1]][1],
-                         scenario = stringr::str_split(file, fixed("/"), n=8)[[1]][8],
-                         path = NULL,
-                         file = NULL,
-                         GDD5threshold = ifelse(GDD5Future < 500 | GDD5Future >1400, 1, NA),
-                         LatThreshold = ifelse(CenterLat < 59.87 | CenterLat > 69.87, 1, NA),
-                         Zscore_hLocal = spatialEco::outliers(PrHeightLocal), 
-                         Zscore_hMeanLat = spatialEco::outliers(PrHeightMeanLat)) 
 
-head(dfPredictions)
-names(dfPredictions)
+# loop through dataframe
 
-dfPredictions$GCM <- ifelse(grepl("bc", dfPredictions$scenario), 'bc - BCC-CSM1-1',
-                            ifelse(grepl("he", dfPredictions$scenario), 'he - HadGEM2-ES',
-                                   ifelse(grepl("mg", dfPredictions$scenario), 'mg - MRI-CGCM3',
-                                          ifelse(grepl("mi", dfPredictions$scenario), 'mi - MIROC-ESM-CHEM',
-                                                 ifelse(grepl("no", dfPredictions$scenario), 'no - NorESM1-M',
-                                                        ifelse(grepl("MEAN", dfPredictions$scenario), "Ensemble", NA))))))
-dfPredictions$RCP <- ifelse(grepl("26", dfPredictions$scenario), '2.6', 
-                            ifelse(grepl("45", dfPredictions$scenario), '4.5', 
-                                   ifelse(grepl("60", dfPredictions$scenario), '6.0', 
-                                          ifelse(grepl("85", dfPredictions$scenario), '8.5', 'Reference'))))
+pathList <- unique(dfPredictions$path)
+shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
+utm <- crs(shpSZ)
 
+for (i in pathList){
+  
+  #i <- pathList[1]
+  dfFilter <- dfPredictions %>% filter(path == i)
+  
+  file <- stringr::str_split(i, fixed("_"))[[1]][1]
+  scenario <- stringr::str_split(file, fixed("/"), n=8)[[1]][8]
+  
+  dfFilter <- dfFilter %>% 
+    #filter(Country == 1) %>% # filter to just Sweden
+    mutate(#file = stringr::str_split(path, fixed("_"))[[1]][1],
+      #scenario = stringr::str_split(file, fixed("/"), n=8)[[1]][8],
+      #path = NULL, # remove un-needed cols
+      #file = NULL,
+      GDD5threshold = ifelse(GDD5Future < 500 | GDD5Future >1400, 1, NA), # record of model thresholds
+      LatThreshold = ifelse(CenterLat < 59.87 | CenterLat > 69.87, 1, NA),
+      Zscore_hLocal = spatialEco::outliers(PrHeightLocal), # calculate Z scores
+      Zscore_hMeanLat = spatialEco::outliers(PrHeightMeanLat)) 
+  
+  # use filters to highlight preds beyond thresholds
+  dfFilter$PrHeightMeanLat2 <- dfFilter$PrHeightMeanLat
+  dfFilter$PrHeightMeanLat2[which(dfFilter$GDD5threshold==1)] <- 9999
+  dfFilter$PrHeightMeanLat2[which(dfFilter$LatThreshold==1)] <- -9999
+  
+  dfFilter$GCM <- ifelse(grepl("bc", dfFilter$path), 'bc - BCC-CSM1-1',
+                              ifelse(grepl("he", dfFilter$path), 'he - HadGEM2-ES',
+                                     ifelse(grepl("mg", dfFilter$path), 'mg - MRI-CGCM3',
+                                            ifelse(grepl("mi", dfFilter$path), 'mi - MIROC-ESM-CHEM',
+                                                   ifelse(grepl("no", dfFilter$path), 'no - NorESM1-M',
+                                                          ifelse(grepl("MEAN", dfFilter$path), "Ensemble", NA))))))
+  dfFilter$RCP <- ifelse(grepl("26", dfFilter$path), '2.6', 
+                              ifelse(grepl("45", dfFilter$path), '4.5', 
+                                     ifelse(grepl("60", dfFilter$path), '6.0', 
+                                            ifelse(grepl("85", dfFilter$path), '8.5', 'Reference'))))
+  
+  dfFilter$GCM <- factor(dfFilter$GCM)
+  dfFilter$RCP <- factor(dfFilter$RCP)
+  dfFilter$path <- NULL
+  
+  vroom_write(dfFilter, paste0(dirOut,"pred_csvs/PrHeight_Nordic_",scenario,".csv"))
+  
+  # convert to spatial
+  spP <- dfFilter
+  rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  rst <- rasterize(spP, rstUTM, spP$PrHeightMeanLat2, fun=max, na.rm=TRUE) 
+  
+  writeRaster(rst, paste0(dirOut,"pred_rsts/PrHeightMeanLat_Nordic_",scenario,"_thresholds.tif"),overwrite=TRUE)
+  
+  
+}
 
-dfPredictions$GCM <- factor(dfPredictions$GCM)
-dfPredictions$RCP <- factor(dfPredictions$RCP)
-
-summary(dfPredictions)
 
 #write.csv(dfPredictions, paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"), row.names = F)
-write.csv(dfPredictions, paste0(dirOut, "HeightPredictions_Nordic_Frontiers.csv"), row.names = F)
+#vroom_write(dfPredictions, paste0(dirOut, "HeightPredictions_Nordic_Frontiers.csv"))
 
+#dfPredictions <- vroom(paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"))
+#dfPredictions <- vroom(paste0(dirOut, "HeightPredictions_Nordic_Frontiers.csv"))
 
-dfPredictions <- read.csv(paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"))
-dfPredictions$GCM <- factor(dfPredictions$GCM)
-dfPredictions$RCP <- factor(dfPredictions$RCP)
 
 ### density distributions per GCM ----------------------------------------------
+
+dfPredictions$GCM <- ifelse(grepl("bc", dfPredictions$path), 'bc - BCC-CSM1-1',
+                            ifelse(grepl("he", dfPredictions$path), 'he - HadGEM2-ES',
+                                   ifelse(grepl("mg", dfPredictions$path), 'mg - MRI-CGCM3',
+                                          ifelse(grepl("mi", dfPredictions$path), 'mi - MIROC-ESM-CHEM',
+                                                 ifelse(grepl("no", dfPredictions$path), 'no - NorESM1-M',
+                                                        ifelse(grepl("MEAN", dfPredictions$path), "Ensemble", NA))))))
+dfPredictions$RCP <- ifelse(grepl("26", dfPredictions$path), '2.6', 
+                            ifelse(grepl("45", dfPredictions$path), '4.5', 
+                                   ifelse(grepl("60", dfPredictions$path), '6.0', 
+                                          ifelse(grepl("85", dfPredictions$path), '8.5', 'Reference'))))
+
+
+dfPredictions$GCM <- factor(dfPredictions$GCM)
+dfPredictions$RCP <- factor(dfPredictions$RCP)
 
 # 1) plot 'raw2' preds first
 
@@ -104,48 +158,20 @@ for(i in GCMs) {
   # print the plots created to screen
   print(GCM_boxplots[[i]])
   # save the plots to home directory. file parameter is used to give plot file name - it can be a complete path of the file name. width and height give dimensions to the file in units = "cm". dpi is dots per inch for the quality of plot
-  ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightMeanLat_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
+  ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightMeanLat_Nordic_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
 }
 
 # arrange all plots in one grid next to each other
 GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
-ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_boxplots_2070.png"), width=21, height=5, dpi=300)
-
-
-# again, but removing data beyond model thresholds
-dfPredictions2 <- dfPredictions %>% filter(is.na(GDD5threshold) | is.na(LatThreshold))
-GCM_boxplots <- list()
-
-for(i in GCMs) {
-  GCM_boxplots[[i]] <- ggplot(dfPredictions2 %>% filter(GCM == i), aes(x=RCP, y=PrHeightMeanLat, fill=RCP)) + 
-    geom_boxplot() +
-    stat_summary(fun=mean, geom="point", color="red", size=4) +   # plot the mean as a red dot
-    scale_y_continuous(limits = c(0, 1200)) +
-    xlab("RCP scenario") +
-    ylab("Height distribution (cm)") +
-    theme_bw() + 
-    ggtitle(i) + 
-    theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
-          axis.title.x = element_text(size = 18, face = "bold"), 
-          axis.title.y = element_text(size = 18, face = "bold"),
-          axis.text.x = element_text(size = 16),
-          axis.text.y = element_text(size = 16))
-  # print the plots created to screen
-  print(GCM_boxplots[[i]])
-  # save the plots to home directory. file parameter is used to give plot file name - it can be a complete path of the file name. width and height give dimensions to the file in units = "cm". dpi is dots per inch for the quality of plot
-  ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightMeanLat_thresholds_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
-}
-
-# arrange all plots in one grid next to each other
-GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
-ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_thresholds_boxplots_2070.png"), width=21, height=5, dpi=300)
+ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
 
 
 # 2) plot distribution of difference between ref local height and future local height
 
 dfReference <- read.csv(files[25])
 summary(dfReference$PrHeightMeanLat)
-# mean height for reference period is 282cm - use as threshold later
+# Swedish mean height for reference period = 282cm - use as threshold later
+# Nordic mean height for reference period = 
 
 dfPredictions <- left_join(dfPredictions, dfReference[,c("GridID","PrHeightMeanLat")], by = "GridID")
 head(dfPredictions)
@@ -203,37 +229,9 @@ ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightDiff_boxplots_207
 
 ### height threshold agreement -------------------------------------------------
 
-for (s in RCP_GCMs){
-  
-  #s <- RCP_GCMs[1]
-  dfFilter <- dfPredictions %>% filter(scenario==s)
-  
-  # use filters to highlight preds beyond thresholds
-  dfFilter$PrHeightMeanLat[which(dfFilter$GDD5threshold==1)] <- 9999
-  dfFilter$PrHeightMeanLat[which(dfFilter$LatThreshold==1)] <- -9999
-  
-  # convert to spatial
-  spP <- dfFilter
-  rm(dfFilter)
-  coordinates(spP) <- ~ CenterLong + CenterLat
-  
-  # define lat long crs
-  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-  
-  # transform points to utm
-  spP <- spTransform(spP, CRSobj = utm)
-  
-  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
-  
-  rst <- rasterize(spP, rstUTM, spP$PrHeightMeanLat, fun=max, na.rm=TRUE) 
-
-  writeRaster(rst, paste0(dirOut,"pred_rsts/PrHeightMeanLat_",s,"_thresholds.tif"),overwrite=TRUE)
-  
-}
-
 # list height tifs 
 rsts <-  list.files(paste0(dirOut, "pred_rsts/"),pattern = "*.tif", full.names = T)
-rsts <- grep("PrHeightMeanLat", rsts, value=TRUE)
+rsts <- grep("Nordic", rsts, value=TRUE)
 
 lstRCP <- c("26in70","60in70","45in70","85in70")
 
@@ -252,7 +250,7 @@ for (rcp in lstRCP){
   spplot(heightStack)
   
   # threshold reclass
-  # height above 282cm (mean height for reference period)
+  # height above 282cm (Swedish mean height for reference period)
   # reclass matrix
   rules2 <- c(-10000, 0, 10,  
               0, 282, 0,
