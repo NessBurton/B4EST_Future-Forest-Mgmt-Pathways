@@ -1,6 +1,6 @@
 
 # date: 09/02/21
-# authors: VB/FT
+# authors: VB
 # description: assess uncertainty in height predictions from Nordic Scots pine model
 # plot density distribution, identify outliers, calc z-scores, calc coefficient of variation
 
@@ -9,16 +9,13 @@
 library(dplyr)
 library(sf)
 library(sp)
-#library(plyr)
-library(reshape2)
 library(gridExtra)
-library(resample)
 library(RColorBrewer)
-library(rstatix)
-library(EnvStats)
 library(ggplot2)
 library(rnaturalearth)
 library(tidyverse)
+library(vroom)
+library(stringr)
 library(raster)
 library(viridis)
 
@@ -38,39 +35,24 @@ files <-  list.files(paste0(dirData, "Nordicpredictions/"),pattern = "*.csv",ful
 files2 <- files[-25] # remove reference for now
 
 # read in and combine
-dfPredictions <- tibble()
+dfPredictions <- vroom(files2, id="path")
+#spec(dfPredictions)
+names(dfPredictions)
 
-for (i in files2){
-  
-  #i <- files[25]
-  
-  scenario <- strsplit(i, "[_]")[[1]][1]
-  scenario <- strsplit(scenario, "[/]")[[1]][8]
-  
-  f <- read.csv(i)
-  
-  #f <- f %>% filter(Country == 1) # filter to Sweden for speed for now
-  
-  f$scenario <- scenario
-  
-  f <- f[,c("GridID","CenterLat","CenterLong","GridAlt","GDD5Future","PrHeightLocal","PrHeightMeanLat","scenario")]
-  
-  # record of values outside model threshold
-  f$GDD5threshold[which(f$GDD5Future<500 | f$GDD5Future > 1400)] <- 1
-  
-  # record of value beyond lat transfer threshold
-  # predicted height growth of unimproved average provenance (mean(LAT)) in the current dataset (64.87N) - so 5 above & below this
-  f$LatThreshold[which(f$CenterLat < 59.87 | f$CenterLat > 69.87)] <- 1 
-  
-  # calc Z-score
-  f$Zscore_hLocal <- spatialEco::outliers(f$PrHeightLocal) 
-  f$Zscore_hMeanLat <- spatialEco::outliers(f$PrHeightMeanLat) 
-  
-  dfPredictions <- rbind(dfPredictions,f)
-  
-}
+dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong",
+                                  "GDD5Future","PrHeightLocal","PrHeightMeanLat")]
+
+dfPredictions <- dfPredictions %>% mutate(file = stringr::str_split(path, fixed("_"))[[1]][1],
+                         scenario = stringr::str_split(file, fixed("/"), n=8)[[1]][8],
+                         path = NULL,
+                         file = NULL,
+                         GDD5threshold = ifelse(GDD5Future < 500 | GDD5Future >1400, 1, NA),
+                         LatThreshold = ifelse(CenterLat < 59.87 | CenterLat > 69.87, 1, NA),
+                         Zscore_hLocal = spatialEco::outliers(PrHeightLocal), 
+                         Zscore_hMeanLat = spatialEco::outliers(PrHeightMeanLat)) 
 
 head(dfPredictions)
+names(dfPredictions)
 
 dfPredictions$GCM <- ifelse(grepl("bc", dfPredictions$scenario), 'bc - BCC-CSM1-1',
                             ifelse(grepl("he", dfPredictions$scenario), 'he - HadGEM2-ES',
