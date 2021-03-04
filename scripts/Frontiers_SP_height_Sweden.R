@@ -18,6 +18,7 @@ library(vroom)
 library(stringr)
 library(raster)
 library(viridis)
+library(scales)
 
 ### dirs -----------------------------------------------------------------------
 
@@ -42,12 +43,15 @@ names(dfPredictions)
 dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong","Country",
                                   "GDD5Future","PrHeightLocal","PrHeightMeanLat")]
 
-
-# loop through dataframe
+# loop through dataframe to find thresholds, calc Z-scores & rasterise
 
 pathList <- unique(dfPredictions$path)
+
+# for utm crs
 shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
 utm <- crs(shpSZ)
+
+#pathList <- pathList[18:24] # for missed when crashed
 
 for (i in pathList){
   
@@ -168,19 +172,18 @@ ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_bo
 
 # 2) plot distribution of difference between ref local height and future local height
 
-dfReference <- read.csv(files[25])
+dfReference <- vroom(files[25])
 summary(dfReference$PrHeightMeanLat)
 # Swedish mean height for reference period = 282cm - use as threshold later
-# Nordic mean height for reference period = 
+# Nordic mean height for reference period = 282
 
 dfPredictions <- left_join(dfPredictions, dfReference[,c("GridID","PrHeightMeanLat")], by = "GridID")
-head(dfPredictions)
-colnames(dfPredictions)[7] <- "PrHeightMeanLat"
-colnames(dfPredictions)[15] <- "RefHeightMeanLat"
+names(dfPredictions)
+colnames(dfPredictions)[8] <- "PrHeightMeanLat"
+colnames(dfPredictions)[11] <- "RefHeightMeanLat"
 
 # calculate difference
 dfPredictions <- dfPredictions %>% mutate(HeightDiff = PrHeightMeanLat - RefHeightMeanLat)
-dfPredictions$RCP <- factor(dfPredictions$RCP)
 
 #g2 <- dfPredictions %>% 
 #  ggplot(aes(RCP,HeightDiff, fill=RCP))+
@@ -207,7 +210,7 @@ for(i in GCMs) {
     stat_summary(fun=mean, geom="point", color="red", size=4) +   # plot the mean as a red dot
     scale_y_continuous(limits = c(0, 2000)) +
     xlab("RCP scenario") +
-    ylab("Height distribution (cm)") +
+    ylab("Height difference (cm)") +
     theme_bw() + 
     ggtitle(i) + 
     theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
@@ -218,12 +221,12 @@ for(i in GCMs) {
   # print the plots created to screen
   print(GCM_boxplots[[i]])
   # save the plots to home directory. file parameter is used to give plot file name - it can be a complete path of the file name. width and height give dimensions to the file in units = "cm". dpi is dots per inch for the quality of plot
-  ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightDiff_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
+  ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightDiff__Nordic_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
 }
 
 # arrange all plots in one grid next to each other
 GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
-ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightDiff_boxplots_2070.png"), width=21, height=5, dpi=300)
+ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightDiff_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
 
 
 
@@ -251,6 +254,7 @@ for (rcp in lstRCP){
   
   # threshold reclass
   # height above 282cm (Swedish mean height for reference period)
+  # height above 282cm (Nordic mean height for reference period)
   # reclass matrix
   rules2 <- c(-10000, 0, 10,  
               0, 282, 0,
@@ -393,7 +397,7 @@ for (rcp in lstRCP){
     #ggtitle(plot.title)+
     #theme_bw()
   
-  png(paste0(dirFigs,"GCM_agreement_meanProvHeight_over_refMean_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
+  png(paste0(dirFigs,"GCM_agreement_Nordic_meanProvHeight_over_refMean_",rcp.name,".png"), units="cm", width = 20, height = 20, res=1000)
   print(p1)
   dev.off()
   
@@ -522,10 +526,11 @@ dfRandom$RCP <- as.factor(dfRandom$RCP)
 dfRandom$Obs <- as.factor(dfRandom$Obs)
 
 # calculate the mean height for each RCP (across GCMs), for each random replicate
-dfRCP <- dfRandom[,c("RCP","GCM","Obs","PrHeightLocal","ensembleHeight")] %>% 
+dfRCP <- dfRandom[,c("RCP","GCM","Obs","PrHeightMeanLat")] %>% 
+  filter(GCM != "Ensemble") %>% 
   dplyr::group_by(RCP, Obs) %>% 
-  dplyr::mutate(RCP.mean = mean(PrHeightLocal),
-                RCP.diff2 = (PrHeightLocal-RCP.mean)^2) %>%
+  dplyr::mutate(RCP.mean = mean(PrHeightMeanLat),
+                RCP.diff2 = (PrHeightMeanLat-RCP.mean)^2) %>%
   ungroup() %>% 
   # then for each GCM (within RCP & replicate), calc standard deviation against the RCP mean
   dplyr::group_by(RCP,GCM,Obs) %>% 
@@ -539,77 +544,108 @@ dfRCP <- dfRandom[,c("RCP","GCM","Obs","PrHeightLocal","ensembleHeight")] %>%
   ylim(0,50)+ylab("CoV (%)")+
   facet_wrap(~RCP)+
   theme_bw()+
-  ggtitle("PrHeightLocal CoV (%) vs RCP mean height")+
+  ggtitle("PrHeightMean CoV (%) vs RCP mean height")+
   theme(axis.title.x = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks = element_blank()))
-ggsave(CV1, file=paste0(dirFigs, "PrHeightLocal_CoV_vs_RCP_mean.png"), width=10, height=6, dpi=300)
-# pretty much identical to results comparing against ensemble mean below
+ggsave(CV1, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_RCP_mean.png"), width=10, height=6, dpi=300)
+# pretty much identical to results comparing against ensemble mean (commented out below)
 # so i think fine to use either?
 
+
+# calculate against reference period mean to compare
+
+dfReference <- vroom(files[25])
+#dfReference <- dfReference[,c("GridID","PrHeight")]
+#colnames(dfReference)[2] <- "PrHeightMean_ref"
+
+#dfRandom <- left_join(dfRandom,dfReference,by="GridID")
+
+refMean <- mean(dfReference$PrHeightMean_ref)
+
+dfRef <- dfRandom %>% 
+  dplyr::group_by(RCP,GCM,Obs) %>% 
+  dplyr::summarise(Refmean = mean(RefHeightMeanLat),
+                   Refsd1 = sqrt(sum((PrHeightMeanLat-Refmean)^2)/1000),
+                   Refsd2 = sqrt(sum((PrHeightMeanLat-refMean)^2)/1000)) %>%  # manually calc sd against ensemble mean, not mean of PrHeightLocal
+  mutate(CoV1 = Refsd1/Refmean*100,
+         CoV2 = Refsd2/refMean*100)
+
+(CV2 <- ggplot(dfRef)+
+      geom_boxplot(aes(GCM, CoV1,col=GCM))+
+      ylim(0,50)+ylab("CoV (%)")+
+      facet_wrap(~RCP)+
+      theme_bw()+
+      ggtitle("PrHeightMean CoV (%) vs. reference mean height")+
+      theme(axis.title.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks = element_blank()))
+  ggsave(CV2, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_reference_mean.png"), width=10, height=6, dpi=300)
+  
+  
 # read in ensemble results
-files <- list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
-ensembleFiles <- grep("MEAN", files, value=TRUE)
+#files <- list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
+#ensembleFiles <- grep("MEAN", files, value=TRUE)
 
-df4.5_ensemble <- read.csv(ensembleFiles[1])
-df8.5_ensemble <- read.csv(ensembleFiles[2])
+#df4.5_ensemble <- read.csv(ensembleFiles[1])
+#df8.5_ensemble <- read.csv(ensembleFiles[2])
 
-df4.5_ensemble <- df4.5_ensemble[,c("GridID","PrHeightLocal")]
-colnames(df4.5_ensemble)[2] <- "HeightLocal_ENS45"
-df8.5_ensemble <- df8.5_ensemble[,c("GridID","PrHeightLocal")]
-colnames(df8.5_ensemble)[2] <- "HeightLocal_ENS85"
+#df4.5_ensemble <- df4.5_ensemble[,c("GridID","PrHeightLocal")]
+#colnames(df4.5_ensemble)[2] <- "HeightLocal_ENS45"
+#df8.5_ensemble <- df8.5_ensemble[,c("GridID","PrHeightLocal")]
+#colnames(df8.5_ensemble)[2] <- "HeightLocal_ENS85"
 
-dfRandom <- left_join(dfRandom,df4.5_ensemble,by="GridID")
-dfRandom <- left_join(dfRandom,df8.5_ensemble,by="GridID")
+#dfRandom <- left_join(dfRandom,df4.5_ensemble,by="GridID")
+#dfRandom <- left_join(dfRandom,df8.5_ensemble,by="GridID")
 
-dfRandom$ensembleHeight <- NA
-dfRandom$ensembleHeight[which(dfRandom$RCP=="4.5")]<-dfRandom$HeightLocal_ENS45[which(dfRandom$RCP=="4.5")]
-dfRandom$ensembleHeight[which(dfRandom$RCP=="8.5")]<-dfRandom$HeightLocal_ENS85[which(dfRandom$RCP=="8.5")]
+#dfRandom$ensembleHeight <- NA
+#dfRandom$ensembleHeight[which(dfRandom$RCP=="4.5")]<-dfRandom$HeightLocal_ENS45[which(dfRandom$RCP=="4.5")]
+#dfRandom$ensembleHeight[which(dfRandom$RCP=="8.5")]<-dfRandom$HeightLocal_ENS85[which(dfRandom$RCP=="8.5")]
 
-head(dfRandom)
+#head(dfRandom)
 
-ENSmean45 <- mean(df4.5_ensemble$HeightLocal_ENS45)
-ENSmean85 <- mean(df8.5_ensemble$HeightLocal_ENS85)
+#ENSmean45 <- mean(df4.5_ensemble$HeightLocal_ENS45)
+#ENSmean85 <- mean(df8.5_ensemble$HeightLocal_ENS85)
 
 # calculate CoV against ensemble model results mean
 # manually calc sd against each ensemble mean, not mean of PrHeightLocal
-dfENS <- dfRandom %>% 
-  dplyr::group_by(RCP,GCM,Obs) %>% 
-  dplyr::summarise(ENSmean = mean(ensembleHeight),
-                   ENSsd1 = sqrt(sum((PrHeightLocal-ENSmean)^2)/1000),
-                   ENSsd2 = if (RCP=="4.5"){sqrt(sum((PrHeightLocal-ENSmean45)^2)/1000)}
-                   else{ sqrt(sum((PrHeightLocal-ENSmean85)^2)/1000)}) %>% # manually calc sd against ensemble mean, not mean of PrHeightLocal
-  mutate(CoV1 = ENSsd1/ENSmean*100,
-         CoV2 = if (RCP=="4.5"){ENSsd2/ENSmean45*100}else{ENSsd2/ENSmean85*100})
+#dfENS <- dfRandom %>% 
+  #dplyr::group_by(RCP,GCM,Obs) %>% 
+  #dplyr::summarise(ENSmean = mean(ensembleHeight),
+                   #ENSsd1 = sqrt(sum((PrHeightLocal-ENSmean)^2)/1000),
+                   #ENSsd2 = if (RCP=="4.5"){sqrt(sum((PrHeightLocal-ENSmean45)^2)/1000)}
+                   #else{ sqrt(sum((PrHeightLocal-ENSmean85)^2)/1000)}) %>% # manually calc sd against ensemble mean, not mean of PrHeightLocal
+  #mutate(CoV1 = ENSsd1/ENSmean*100,
+         #CoV2 = if (RCP=="4.5"){ENSsd2/ENSmean45*100}else{ENSsd2/ENSmean85*100})
 
-(CV2 <- ggplot(dfENS)+
-  geom_boxplot(aes(GCM, CoV1,col=GCM))+
-  ylim(0,50)+ylab("CoV (%)")+
-  facet_wrap(~RCP)+
-  theme_bw()+
-  ggtitle("PrHeightLocal CoV (%) vs. ensemble mean height")+
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks = element_blank()))
-ggsave(CV2, file=paste0(dirFigs, "PrHeightLocal_CoV_vs_ensemble_mean.png"), width=10, height=6, dpi=300)
+#(CV2 <- ggplot(dfENS)+
+  #geom_boxplot(aes(GCM, CoV1,col=GCM))+
+  #ylim(0,50)+ylab("CoV (%)")+
+  #facet_wrap(~RCP)+
+  #theme_bw()+
+  #ggtitle("PrHeightLocal CoV (%) vs. ensemble mean height")+
+  #theme(axis.title.x = element_blank(),
+        #axis.text.x = element_blank(),
+        #axis.ticks = element_blank()))
+#ggsave(CV2, file=paste0(dirFigs, "PrHeightLocal_CoV_vs_ensemble_mean.png"), width=10, height=6, dpi=300)
 
 # or can it be this simple?
 # calculate mean height for each GCM within each RCP, for each random replicate
-dfGCM <- dfRandom %>% 
-  dplyr::group_by(RCP, GCM, Obs) %>% 
-  dplyr::summarise(GCM.mean = mean(PrHeightLocal),
-                   GCM.sd = sd(PrHeightLocal)) %>% 
-  mutate(CoV = GCM.sd/GCM.mean*100)
+#dfGCM <- dfRandom %>% 
+  #dplyr::group_by(RCP, GCM, Obs) %>% 
+  #dplyr::summarise(GCM.mean = mean(PrHeightLocal),
+                   #GCM.sd = sd(PrHeightLocal)) %>% 
+  #mutate(CoV = GCM.sd/GCM.mean*100)
 
 # boxplot to show results from random replicates
-(CV3 <- ggplot(dfGCM)+
-  geom_boxplot(aes(GCM, CoV,col=GCM))+
-  ylim(0,50)+ylab("CoV (%)")+
-  facet_wrap(~RCP)+
-  theme_bw()+
-  ggtitle("PrHeightLocal CoV (%) vs. GCM mean")+
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks = element_blank()))
-ggsave(CV3, file=paste0(dirFigs, "PrHeightLocal_CoV_vs_GCM_mean.png"), width=10, height=6, dpi=300)
+#(CV3 <- ggplot(dfGCM)+
+  #geom_boxplot(aes(GCM, CoV,col=GCM))+
+  #ylim(0,50)+ylab("CoV (%)")+
+  #facet_wrap(~RCP)+
+  #theme_bw()+
+  #ggtitle("PrHeightLocal CoV (%) vs. GCM mean")+
+  #theme(axis.title.x = element_blank(),
+        #axis.text.x = element_blank(),
+        #axis.ticks = element_blank()))
+#ggsave(CV3, file=paste0(dirFigs, "PrHeightLocal_CoV_vs_GCM_mean.png"), width=10, height=6, dpi=300)
 
