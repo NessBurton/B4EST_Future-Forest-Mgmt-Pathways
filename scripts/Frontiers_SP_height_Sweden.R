@@ -49,7 +49,7 @@ for (i in files2){
   
   f <- read.csv(i)
   
-  f <- f %>% filter(Country == 1) # filter to Sweden for speed for now
+  #f <- f %>% filter(Country == 1) # filter to Sweden for speed for now
   
   f$scenario <- scenario
   
@@ -89,7 +89,9 @@ dfPredictions$RCP <- factor(dfPredictions$RCP)
 
 summary(dfPredictions)
 
-write.csv(dfPredictions, paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"), row.names = F)
+#write.csv(dfPredictions, paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"), row.names = F)
+write.csv(dfPredictions, paste0(dirOut, "HeightPredictions_Nordic_Frontiers.csv"), row.names = F)
+
 
 dfPredictions <- read.csv(paste0(dirOut, "HeightPredictions_Sweden_Frontiers.csv"))
 dfPredictions$GCM <- factor(dfPredictions$GCM)
@@ -216,152 +218,6 @@ GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
 ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightDiff_boxplots_2070.png"), width=21, height=5, dpi=300)
 
 
-### identify outliers across all RCPs and GCMs ---------------------------------
-
-# unsure about this bit
-
-#lsOutliers <- list()
-#for(i in 4:8){
-  #lsOutliers[[i]] <- boxplot(dfPredictions[[i]], plot=FALSE)$out 
-#}
-
-# identify the outliers within the dataset
-#outliers.50 <- list()
-#for(ii in 4:8){
-  #outliers.50[[ii]] <- dfPredictions[dfPredictions[[ii]] %in% lsOutliers[[ii]],]
-#}
-
-#outliers.50[[4]]
-
-
-### calculate z-scores and plot ------------------------------------------------
-
-# load country outline
-worldmap <- ne_countries(scale = 'medium', type = 'map_units',
-                         returnclass = 'sf')
-sweden <- worldmap[worldmap$name == 'Sweden',]
-
-# use same cols as Felix
-nb.cols <- 9
-mycolors <- colorRampPalette(brewer.pal(9, "BrBG"))(nb.cols)
-
-# calculate Zscores
-#dfPredictions$Zscore_heightLocal <- spatialEco::outliers(dfPredictions$PrHeightLocal) 
-
-RCP_GCMs <- unique(dfPredictions$scenario)
-
-for (s in RCP_GCMs){
-  
-  #s <- RCP_GCMs[1]
-  dfFilter <- dfPredictions %>% filter(scenario==s)
-  #dfFilter$Zscore_heightLocal <- spatialEco::outliers(dfFilter$PrHeightLocal)
-  
-  # different method for identifying outliers
-  #dfOut <- dfFilter %>% 
-    #identify_outliers(PrHeightLocal) %>% 
-    #filter(is.outlier==TRUE | is.extreme==TRUE)
-  
-  # make spatial
-  spPredictions <- dfFilter
-  #spPredictions <- dfOut
-  coordinates(spPredictions) <- ~CenterLong+CenterLat
-  crs(spPredictions) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
-  
-  # convert to sf for plotting
-  sfPredictions <- st_as_sf(spPredictions)
-  p1 <- ggplot()+
-    geom_sf(data = sfPredictions, aes(col=Zscore_hMeanLat))+
-    geom_sf(data = sweden, fill=NA)+
-    scale_colour_gradientn(colors = mycolors)+
-    ggtitle(s)+
-    labs(col="Z-score")+
-    theme_bw()
-  print(p1)
-  #ggsave(p1, file=paste0(dirFigs, s, "_PrHeightLocal_outliers.png"), width=8, height=8, dpi=300)
-  ggsave(p1, file=paste0(dirFigs, s, "_PrHeightMeanLat_Zscore.png"), width=8, height=8, dpi=300)
-  
-}
-
-### rasterize Z-score per RCP-GCM + plot agreement? ----------------------------
-
-# Not sure how useful this is...
-
-# for utm crs
-sfSeedZones <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
-utm <- crs(sfSeedZones)
-
-RCP_GCMs <- unique(dfPredictions$scenario)
-
-for (s in RCP_GCMs){
-  
-  #s <- RCP_GCMs[1]
-  dfFilter <- dfPredictions %>% filter(scenario==s)
-  
-  # convert to spatial
-  spP <- dfFilter
-  rm(dfFilter)
-  coordinates(spP) <- ~ CenterLong + CenterLat
-  
-  # define lat long crs
-  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-  
-  # transform points to utm
-  spP <- spTransform(spP, CRSobj = utm)
-  
-  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
-  
-  rst <- rasterize(spP, rstUTM, spP$Zscore_heightLocal, fun=max, na.rm=TRUE) 
-  
-  writeRaster(rst, paste0(dirOut,"Zscore_rst/Zscore_PrHeightLocal_",s,"_thresholds.tif"),overwrite=TRUE)
-  
-  }
-
-# list Zscore tifs 
-rsts <-  list.files(paste0(dirOut, "Zscore_rst/"),pattern = "*.tif", full.names = T)
-rsts <- grep("45in50", rsts, value=TRUE)
-
-# raster stack
-ZscoreStack <- stack(rsts)
-spplot(ZscoreStack)
-
-# threshold reclass
-# lets say Z score between +0.5 and -0.5
-# reclass matrix
-rules1 <- c(-2, -0.5, -1,  -0.5, 0.5, NA, 0.5, 1, 1)
-rcl1 <- matrix(rules1, ncol=3, byrow=TRUE)
-rclassStack <- reclassify(ZscoreStack,rcl1)
-spplot(rclassStack)
-
-sumStack <- stackApply(rclassStack, indices=1, fun=sum)
-plot(sumStack)
-
-# contour
-contour1 <- rasterToContour(sumStack)
-contour1 <- st_as_sf(contour1)
-contour1$level <- as.numeric(contour1$level)
-contour1$agreement <- NA
-contour1$agreement[which(contour1$level<=-4)]<-"4 GCMs < mean"
-contour1$agreement[which(contour1$level<=-3&contour1$level>-4)]<-"3 GCMs < mean"
-contour1$agreement[which(contour1$level<=-2&contour1$level>-3)]<-"2 GCMs < mean"
-contour1$agreement[which(contour1$level<=-1&contour1$level>-2)]<-"1 GCM < mean"
-contour1$agreement[which(contour1$level<=0&contour1$level>-1)]<- NA
-contour1$agreement[which(contour1$level<=1&contour1$level>0)]<-"1 GCM > mean"
-contour1$agreement[which(contour1$level<=2&contour1$level>1)]<-"2 GCMs > mean"
-contour1$agreement[which(contour1$level<=3&contour1$level>2)]<-"3 GCMs > mean"
-contour1$agreement[which(contour1$level<=4&contour1$level>3)]<-"4 GCMs > mean"
-contour1$agreement[which(contour1$level<=5&contour1$level>4)]<-"All GCMs > mean"
-
-contour1$agreement <- factor(contour1$agreement, ordered=TRUE, levels=c("4 GCMs < mean","3 GCMs < mean","2 GCMs < mean", "1 GCM < mean",
-                                                                           "1 GCM > mean","2 GCMs > mean","3 GCMs > mean","4 GCMs > mean","All GCMs > mean"))
-
-contour1 <- st_cast(contour1, to="POLYGON")
-
-ggplot()+
-  geom_sf(data = sweden)+
-  geom_sf(data=contour1,aes(fill=agreement),col=NA)+
-  scale_fill_viridis(discrete = T, option = "C")+
-  #ggtitle(plot.title)+
-  theme_minimal()
 
 ### height threshold agreement -------------------------------------------------
 
