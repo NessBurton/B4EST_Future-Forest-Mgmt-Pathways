@@ -17,6 +17,7 @@ library(raster)
 library(ggplot2)
 library(viridis)
 library(rnaturalearth)
+library(vroom)
 
 ### plan -----------------------------------------------------------------------
 
@@ -85,13 +86,14 @@ memory.limit(size = 56000)
 
 # list production prediction files
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
+files <- grep("in70",files,value = TRUE)
 
 # scenario list
 scenario_list <- c()
 
 for (f in files){
   
-  #f <- files[5]
+  #f <- files[1]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
@@ -100,8 +102,8 @@ for (f in files){
   
   print(paste0("Processing for scenario = ", scenario))
   
-  dfP <- read.csv(f)
-  dfP <- (dfP)[,c(2:3,11:22)]
+  dfP <- vroom(f)
+  dfP <- dfP[,c(2:3,11:22)]
   dfP[,7:14] <- round(dfP[,7:14]*100, digits = 3) # convert survival & prod indices to %
   
   # apply thresholds
