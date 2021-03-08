@@ -215,19 +215,18 @@ head(df4.5)
 
 df4.5 <- df4.5 %>% ungroup()
 df4.5$trafficLight <- NA
-df4.5$trafficLight[which(dfGCM$n_m120==5)] <- "All GCMs"
-df4.5$trafficLight[which(dfGCM$n_m120==4)] <- "4 GCMs"
-df4.5$trafficLight[which(dfGCM$n_m120==3)] <- "3 GCMs"
-df4.5$trafficLight[which(dfGCM$n_m120==2)] <- "2 GCMs"
-df4.5$trafficLight[which(dfGCM$n_m120==1)] <- "1 GCM"
-df4.5$trafficLight[which(dfGCM$n_m120==0)] <- "No GCMs"
-df4.5$trafficLight[which(is.na(dfGCM$n_m120))] <- "Beyond model threshold"
+df4.5$trafficLight[which(df4.5$n_m120==5)] <- "All GCMs"
+df4.5$trafficLight[which(df4.5$n_m120==4)] <- "4 GCMs"
+df4.5$trafficLight[which(df4.5$n_m120==3)] <- "3 GCMs"
+df4.5$trafficLight[which(df4.5$n_m120==2)] <- "2 GCMs"
+df4.5$trafficLight[which(df4.5$n_m120==1)] <- "1 GCM"
+df4.5$trafficLight[which(df4.5$n_m120==0)] <- "No GCMs"
+df4.5$trafficLight[which(is.na(df4.5$n_m120))] <- "Beyond model threshold"
 
 df4.5$trafficLight <- factor(df4.5$trafficLight, ordered = T,
                              levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
 
 head(df4.5)
-# this is getting there!
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 800)
 ggplot(df4.5)+
   geom_tile(aes(seedOrchard,period, fill=trafficLight))+
@@ -277,13 +276,13 @@ head(df8.5)
 
 df8.5 <- df8.5 %>% ungroup()
 df8.5$trafficLight <- NA
-df8.5$trafficLight[which(dfGCM$n_m120==5)] <- "All GCMs"
-df8.5$trafficLight[which(dfGCM$n_m120==4)] <- "4 GCMs"
-df8.5$trafficLight[which(dfGCM$n_m120==3)] <- "3 GCMs"
-df8.5$trafficLight[which(dfGCM$n_m120==2)] <- "2 GCMs"
-df8.5$trafficLight[which(dfGCM$n_m120==1)] <- "1 GCM"
-df8.5$trafficLight[which(dfGCM$n_m120==0)] <- "No GCMs"
-df8.5$trafficLight[which(is.na(dfGCM$n_m120))] <- "Beyond model threshold"
+df8.5$trafficLight[which(df8.5$n_m120==5)] <- "All GCMs"
+df8.5$trafficLight[which(df8.5$n_m120==4)] <- "4 GCMs"
+df8.5$trafficLight[which(df8.5$n_m120==3)] <- "3 GCMs"
+df8.5$trafficLight[which(df8.5$n_m120==2)] <- "2 GCMs"
+df8.5$trafficLight[which(df8.5$n_m120==1)] <- "1 GCM"
+df8.5$trafficLight[which(df8.5$n_m120==0)] <- "No GCMs"
+df8.5$trafficLight[which(is.na(df8.5$n_m120))] <- "Beyond model threshold"
 
 df8.5$trafficLight <- factor(df8.5$trafficLight, ordered = T,
                              levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
@@ -306,11 +305,6 @@ dev.off()
 df8.5$ZON2 <- factor(df8.5$ZON2,ordered = T, levels=zoneOrder)
 
 sfSeedZones8.5 <- left_join(sfSeedZones,df8.5,by="ZON2")
-
-# load country outline
-worldmap <- ne_countries(scale = 'medium', type = 'map_units',
-                         returnclass = 'sf')
-sweden <- worldmap[worldmap$name == 'Sweden',]
 
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5_spatial.png"), width = 1000, height = 800)
 ggplot()+
