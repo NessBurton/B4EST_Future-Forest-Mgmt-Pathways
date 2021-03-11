@@ -24,12 +24,12 @@ library(rnaturalearth)
 ### reference data -------------------------------------------------------------
 
 # refclimate
-df_ref <- vroom(paste0(dirData,"Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+#df_ref <- vroom(paste0(dirData,"Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
 # create a spatialpoints dataframe
-sp_ref <- df_ref
-coordinates(sp_ref) <- ~ CenterLong + CenterLat
+#sp_ref <- df_ref
+#coordinates(sp_ref) <- ~ CenterLong + CenterLat
 # set crs - assume lat long
-proj4string(sp_ref) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+#proj4string(sp_ref) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
 
 ### seed zones -----------------------------------------------------------------
 
@@ -53,8 +53,8 @@ zoneOrder <- c("1a","1b","1c","2","3","6","7","10000","12000","13000","15000","1
 sfSeedZones$ZON2 <- factor(sfSeedZones$ZON2, ordered = TRUE, levels = zoneOrder)
 
 # plot
-ggplot(sfSeedZones)+
-  geom_sf(aes(fill=ZON2),col=NA)+theme_minimal()
+#ggplot(sfSeedZones)+
+  #geom_sf(aes(fill=ZON2),col=NA)+theme_minimal()
 
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
@@ -66,12 +66,12 @@ sp_ref <- spTransform(sp_ref, CRSobj = utm)
 # res should be 1km - 1000m if UTM, using 1100m to deal with irregular grid (gaps if using 1000m)
 rstUTM <- raster(crs = crs(sp_ref), resolution = c(1100,1100), ext = extent(sp_ref))
 
-rstElev <- rasterize(sp_ref, rstUTM, sp_ref$GridAlt, fun=max)
-crs(rstElev)
-plot(rstElev);plot(spSeedZones,add=TRUE, fill=NA)
+#rstElev <- rasterize(sp_ref, rstUTM, sp_ref$GridAlt, fun=max)
+#crs(rstElev)
+#plot(rstElev);plot(spSeedZones,add=TRUE, fill=NA)
 
-dfElev <- extract(rstElev, spSeedZones, fun=max, df=TRUE, na.rm=TRUE)
-dfElev$Zone <- zoneOrder
+#dfElev <- extract(rstElev, spSeedZones, fun=max, df=TRUE, na.rm=TRUE)
+#dfElev$Zone <- zoneOrder
 
 
 ### read in Scots pine predictions and join to zones ---------------------------
@@ -80,27 +80,27 @@ dfElev$Zone <- zoneOrder
 # will use unimproved provenance under reference climate to calculate future change
 
 # convert to sf
-sfReference <- st_as_sf(sp_ref)
+#sfReference <- st_as_sf(sp_ref)
 #rm(sp_ref)
 # spatial join
-sfReference <- st_join(sfReference,sfSeedZones)
-head(sfReference)
-sfReference$ZON2 <- factor(sfReference$ZON2, ordered = TRUE, levels = zoneOrder)
-summary(sfReference$ZON2)
+#sfReference <- st_join(sfReference,sfSeedZones)
+#head(sfReference)
+#sfReference$ZON2 <- factor(sfReference$ZON2, ordered = TRUE, levels = zoneOrder)
+#summary(sfReference$ZON2)
 
-head(sfReference)
-crs(sfReference)
+#head(sfReference)
+#crs(sfReference)
 
 # convert survival + prodIdx to percentages
-sfReference[,11:18] <- sfReference[,11:18] * 100
+#sfReference[,11:18] <- sfReference[,11:18] * 100
 
 # needs adjusting
-sfReference <- sfReference[,c(3:18)] %>% 
-  st_drop_geometry() %>%
-  pivot_longer(cols = 1:16, names_to="variable",values_to="value")
-sfReference$prod_idx <- sfReference$prod_idx * 100 # convert from decimal to percentage
-colnames(sfReference)[3] <- "ref_prod_idx"
-rm(df_ref)
+#sfReference <- sfReference[,c(3:18)] %>% 
+  #st_drop_geometry() %>%
+  #pivot_longer(cols = 1:16, names_to="variable",values_to="value")
+#sfReference$prod_idx <- sfReference$prod_idx * 100 # convert from decimal to percentage
+#colnames(sfReference)[3] <- "ref_prod_idx"
+#rm(df_ref)
 
 # list production prediction files per scenario
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -130,19 +130,32 @@ for (f in files){
   dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62 <0.5)] <- NA
   dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64 <0.5)] <- NA
   dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66 <0.5)] <- NA
+  dfP$PrProdidxSOhs60[which(dfP$PrSurvSOhs60 <0.5)] <- NA
+  dfP$PrProdidxSOhs62[which(dfP$PrSurvSOhs62 <0.5)] <- NA
+  dfP$PrProdidxSOhs64[which(dfP$PrSurvSOhs64 <0.5)] <- NA
+  dfP$PrProdidxSOhs66[which(dfP$PrSurvSOhs66 <0.5)] <- NA
   
   dfP$PrProdidxSOh60[which(dfP$CenterLat > 65 | dfP$CenterLat < 55)] <- NA
   dfP$PrProdidxSOh62[which(dfP$CenterLat > 67 | dfP$CenterLat < 57)] <- NA
   dfP$PrProdidxSOh64[which(dfP$CenterLat > 69 | dfP$CenterLat < 59)] <- NA
   dfP$PrProdidxSOh66[which(dfP$CenterLat > 71 | dfP$CenterLat < 61)] <- NA
+  dfP$PrProdidxSOhs60[which(dfP$CenterLat > 65 | dfP$CenterLat < 55)] <- NA
+  dfP$PrProdidxSOhs62[which(dfP$CenterLat > 67 | dfP$CenterLat < 57)] <- NA
+  dfP$PrProdidxSOhs64[which(dfP$CenterLat > 69 | dfP$CenterLat < 59)] <- NA
+  dfP$PrProdidxSOhs66[which(dfP$CenterLat > 71 | dfP$CenterLat < 61)] <- NA
   
   # and GDD5
   dfP$PrProdidxSOh60[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
   dfP$PrProdidxSOh62[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
   dfP$PrProdidxSOh64[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
   dfP$PrProdidxSOh66[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOhs60[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOhs62[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
   
   print("Convert to spatial, transform to utm")
+  
   coordinates(dfP)<- ~ CenterLong + CenterLat
   # set crs - assume lat long
   proj4string(dfP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
@@ -152,22 +165,28 @@ for (f in files){
   rm(dfP)
   
   print("Spatial join to seed zones")
+  
   # spatial join
   dfP_sf <- st_join(dfP_sf,sfSeedZones)
   dfP_sf$ZON2 <- factor(dfP_sf$ZON2)
   
   print("Transform to long format")
-  df_long <- dfP_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66","ZON2")] %>% 
+  
+  df_long <- dfP_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
+                       "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
+                       "ZON2")] %>% 
     filter(!is.na(ZON2)) %>% # filter to just zones
     st_drop_geometry() %>%
-    pivot_longer(1:4, names_to="seed_orchard",values_to="prod_idx")
+    pivot_longer(1:8, names_to="seed_orchard",values_to="prod_idx")
   
   df_long$prod_idx <- df_long$prod_idx * 100
   
   df_long$scenario <- scenario
   
   print("Calculate summaries")
+  
   df_summary <- df_long %>% 
+    filter(!is.na(prod_idx)) %>% 
     group_by(ZON2, seed_orchard) %>% # group by zone
     summarise_if(is.numeric,c("mean","sd","IQR","min","max"), na.rm = TRUE) #%>% 
   #summarise(c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66"),.funs=c("mean","sd","IQR","min","max"))
