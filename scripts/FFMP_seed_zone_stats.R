@@ -19,6 +19,7 @@ library(raster)
 library(ggplot2)
 library(RColorBrewer)
 library(vroom)
+library(rnaturalearth)
 
 ### reference data -------------------------------------------------------------
 
@@ -135,6 +136,12 @@ for (f in files){
   dfP$PrProdidxSOh64[which(dfP$CenterLat > 69 | dfP$CenterLat < 59)] <- NA
   dfP$PrProdidxSOh66[which(dfP$CenterLat > 71 | dfP$CenterLat < 61)] <- NA
   
+  # and GDD5
+  dfP$PrProdidxSOh60[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOh62[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOh64[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOh66[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  
   print("Convert to spatial, transform to utm")
   coordinates(dfP)<- ~ CenterLong + CenterLat
   # set crs - assume lat long
@@ -172,11 +179,13 @@ for (f in files){
   print(paste0("Processed scenario: ",scenario))
   
   if (f == files[25]){
-    vroom_write(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden.csv"))
+    vroom_write(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh.csv"))
   }
   
 }
 
+
+df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh.csv"))
 head(df_results_summary)
 summary(df_results_summary)
 
@@ -208,10 +217,9 @@ df4.5 <- dfMaster %>%
   group_by(ZON2,period,seedOrchard) %>% 
   summarise(n_GCMs = n(),
             n_m120 = sum(mean > 120),
-            #n_m120 = sum(max > 120),
-            p_m120 = n_m120 / n_GCMs*100)
+            n_m110 = sum(mean > 110))
 
-head(df4.5)
+# plot agreement above 120% prodidx
 
 df4.5 <- df4.5 %>% ungroup()
 df4.5$trafficLight <- NA
@@ -226,7 +234,6 @@ df4.5$trafficLight[which(is.na(df4.5$n_m120))] <- "Beyond model threshold"
 df4.5$trafficLight <- factor(df4.5$trafficLight, ordered = T,
                              levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
 
-head(df4.5)
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 800)
 ggplot(df4.5)+
   geom_tile(aes(seedOrchard,period, fill=trafficLight))+
@@ -235,13 +242,36 @@ ggplot(df4.5)+
   facet_wrap(~ZON2, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed orchard")+
-  ggtitle("Likelihood of seed orchard performance > 120 under RCP4.5")+
-  labs(fill="Likelihood")
+  labs(fill="Agreement")
+dev.off()
+
+# plot agreement above 110% prodidx
+
+df4.5$trafficLight2 <- NA
+df4.5$trafficLight2[which(df4.5$n_m110==5)] <- "All GCMs"
+df4.5$trafficLight2[which(df4.5$n_m110==4)] <- "4 GCMs"
+df4.5$trafficLight2[which(df4.5$n_m110==3)] <- "3 GCMs"
+df4.5$trafficLight2[which(df4.5$n_m110==2)] <- "2 GCMs"
+df4.5$trafficLight2[which(df4.5$n_m110==1)] <- "1 GCM"
+df4.5$trafficLight2[which(df4.5$n_m110==0)] <- "No GCMs"
+df4.5$trafficLight2[which(is.na(df4.5$n_m110))] <- "Beyond model threshold"
+
+df4.5$trafficLight2 <- factor(df4.5$trafficLight2, ordered = T,
+                             levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5.png"), width = 600, height = 800)
+ggplot(df4.5)+
+  geom_tile(aes(seedOrchard,period, fill=trafficLight2))+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  coord_flip()+
+  facet_wrap(~ZON2, nrow = 11, ncol=2)+
+  theme_bw()+
+  ylab("RCP")+xlab("Seed orchard")+
+  labs(fill="Agreement")
 dev.off()
 
 # could join back & plot spatially
 df4.5$ZON2 <- factor(df4.5$ZON2,ordered = T, levels=zoneOrder)
-
 sfSeedZones4.5 <- left_join(sfSeedZones,df4.5,by="ZON2")
 
 # load country outline
@@ -258,7 +288,19 @@ ggplot()+
   theme_bw()+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())+
-  labs(fill = "Likelihood production index > 120%")
+  labs(fill = "GCM agreement production index > 120%")
+dev.off()
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5_spatial.png"), width = 1000, height = 800)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones4.5, aes(fill=trafficLight2), colour=0)+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  facet_grid(seedOrchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "GCM agreement production index > 110%")
 dev.off()
 
 # RCP8.5
@@ -269,8 +311,7 @@ df8.5 <- dfMaster %>%
   group_by(ZON2,period,seedOrchard) %>% 
   summarise(n_GCMs = n(),
             n_m120 = sum(mean > 120),
-            #n_m120 = sum(max > 120),
-            p_m120 = n_m120 / n_GCMs*100)
+            n_m110 = sum(mean > 110))
 
 head(df8.5)
 
@@ -297,7 +338,7 @@ ggplot(df8.5)+
   facet_wrap(~ZON2, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed orchard")+
-  ggtitle("Likelihood of seed orchard performance > 120 under RCP4.5")+
+  #ggtitle("Likelihood of seed orchard performance > 120 under RCP8.5")+
   labs(fill="Likelihood")
 dev.off()
 
