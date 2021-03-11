@@ -22,16 +22,8 @@ library(vroom)
 library(scales)
 library(ggpattern)
 
-### steps ----------------------------------------------------------------------
 
-# 1. rasterise performance of a single seed orchard for each GCM/RCP combo
-# 2. choose appropriate threshold of performance (and remove if survival below 50%) - reclassify rasters - 1 if above threshold, 0 if below
-# 3. sum all rasters
-# 4. contour plot
-
-### work -----------------------------------------------------------------------
-
-### rasterise - CAN SKIP TO LINES 96/97 as the rasters exist now
+### rasterise ------------------------------------------------------------------
 
 # list production prediction files
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -425,8 +417,9 @@ lstPlots <- grep("GCM_agreement_SO", lstPlots, value = TRUE)
 lstPlots <- lstPlots[-17]
 # filter to rcp
 lstPlots45 <- grep("RCP45",lstPlots, value=TRUE)
+test <- lstPlots45[1:2]
 
-rl <-  lapply(lstPlots45, png::readPNG)
+rl <-  lapply(test, png::readPNG)
 gl <- lapply(rl, grid::rasterGrob)
 gridExtra::grid.arrange(grobs=gl)
 
