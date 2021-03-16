@@ -222,11 +222,11 @@ dfMaster$RCP <- ifelse(grepl("45", dfMaster$scenario), '4.5',
                        ifelse(grepl("85", dfMaster$scenario), '8.5', 'Baseline'))
 dfMaster$period <- ifelse(grepl("50", dfMaster$scenario), "2050",
                           ifelse(grepl("70", dfMaster$scenario), '2070', NA))
-dfMaster$seedOrchard <- substr(dfMaster$seed_orchard, 10,14)
+dfMaster$seedOrchard <- substr(dfMaster$seed_orchard, 10,15)
 
 dfMaster$GCM <- factor(dfMaster$GCM)
 dfMaster$RCP <- factor(dfMaster$RCP)
-dfMaster$seedOrchard <- factor(dfMaster$seedOrchard)
+dfMaster$seedOrchard <- factor(dfMaster$seedOrchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
 
 # RCP4.5
 df4.5 <- dfMaster %>%
