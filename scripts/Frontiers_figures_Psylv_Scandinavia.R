@@ -377,15 +377,15 @@ for (rcp in lstRCP){
 }
 
 # get legend
-library(ggpubr)
+#library(ggpubr)
 
 # Extract the legend. Returns a gtable
-legend <- get_legend(p2)
+#legend <- get_legend(p2)
 
 # Convert to a ggplot and save
-legend <- as_ggplot(legend)
-plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"))
+#legend <- as_ggplot(legend)
+#plot(legend)
+#ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"))
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -395,10 +395,10 @@ library(png)
 library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
-lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
+#lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
 lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
-lstPlots <- lstPlots[-c(5,6)]
-lstPlots <- lstPlots[c(1,3,2,4)] # specific order for plotting
+lstPlots <- lstPlots[c(1,6,7,8,9)]
+lstPlots <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
 
 plots <- lapply(lstPlots,function(x){
   img <- as.raster(readPNG(x))
@@ -412,6 +412,6 @@ plots <- lapply(lstPlots,function(x){
 # OR
 # png
 ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=8.5, height=11, 
-       marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
+       marrangeGrob(grobs = plots, nrow=2, ncol=3,top=NULL))
 
 
