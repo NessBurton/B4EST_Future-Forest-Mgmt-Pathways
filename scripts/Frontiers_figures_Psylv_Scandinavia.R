@@ -109,16 +109,19 @@ dfPredictions$RCP <- factor(dfPredictions$RCP)
   scale_fill_brewer(palette = "Dark2")+
   stat_summary(fun=mean, geom="point", color="black", size=2, pch=4) +   
   scale_y_continuous(limits = c(0, 600)) +
-  facet_wrap(~GCM, ncol = 5)+
+  facet_wrap(~GCM, ncol = 3)+
   xlab("RCP scenario") +
   ylab("Height distribution (cm)") +
   theme_bw() + 
-  theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
-        axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
-        axis.text.x = element_text(size = 14),
-        axis.text.y = element_text(size = 14)))
+  theme(axis.title.x = element_blank(), 
+        axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 14),
+        axis.ticks.x = element_blank(),
+        legend.title = element_text(size = 14, face = "bold")+
+        strip.text = element_text(face="bold", size = 16)))
   
-ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
+ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=12, height=10, dpi=300)
 
 
 
@@ -130,36 +133,6 @@ dfRandom$RCP <- as.factor(dfRandom$RCP)
 dfRandom$Obs <- as.factor(dfRandom$Obs)
 
 dfCoV <- dfRandom %>% 
-  group_by(RCP,GCM,Obs) %>% 
-  mutate(DiffMin = PrHeightMinLat - minLatMean,
-         DiffMean = PrHeightMeanLat - meanLatMean,
-         DiffMax = PrHeightMaxLat - maxLatMean,
-         sqMin = DiffMin ^ 2,
-         sqMean = DiffMean ^ 2,
-         sqMax = DiffMax ^ 2) %>% 
-  # manually calc sd from reference mean
-  summarise(SDmin = sqrt(sum(sqMin)/1000),
-            SDmean = sqrt(sum(sqMean)/1000),
-            SDmax = sqrt(sum(sqMax)/1000)) %>%  
-  mutate(CoV_min = SDmin/minLatMean*100,
-         CoV_mean = SDmean/meanLatMean*100,
-         CoV_max = SDmax/maxLatMean*100)
-
-(CVmean <- dfCoV %>% filter(GCM != "Ensemble") %>% 
-    ggplot()+
-    geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
-    scale_fill_brewer(palette = "Dark2")+
-    ylim(0,30)+ylab("CoV (%)")+
-    facet_wrap(~GCM, ncol = 5)+
-    theme_bw()+
-    theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
-          axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
-          axis.text.x = element_text(size = 14),
-          axis.text.y = element_text(size = 14)))
-
-ggsave(CVmean, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
-
-dfCoV2 <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
   mutate(DiffMin = PrHeightMinLatT - minLatMean,
          DiffMean = PrHeightMeanLatT - meanLatMean,
@@ -175,19 +148,50 @@ dfCoV2 <- dfRandom %>%
          CoV_mean = SDmean/meanLatMean*100,
          CoV_max = SDmax/maxLatMean*100)
 
-(CVmean2 <- dfCoV %>% filter(GCM != "Ensemble") %>% 
+(CVmean <- dfCoV %>% filter(GCM != "Ensemble") %>% 
     ggplot()+
     geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
     scale_fill_brewer(palette = "Dark2")+
     ylim(0,30)+ylab("CoV (%)")+
-    facet_wrap(~GCM, ncol = 5)+
+    facet_wrap(~GCM, ncol = 3)+
     theme_bw()+
-    theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
-          axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
+    theme(axis.title.x = element_text(size = 18, face = "bold", margin = margin(t = 15)), 
+          axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
           axis.text.x = element_text(size = 14),
-          axis.text.y = element_text(size = 14)))
+          axis.text.y = element_text(size = 14),
+          strip.text = element_text(face="bold", size = 16))
 
-ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMeanThresholds_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
+ggsave(CVmean, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_reference_mean.png"), width=12, height=12, dpi=300)
+
+#dfCoV2 <- dfRandom %>% 
+  #group_by(RCP,GCM,Obs) %>% 
+  #mutate(DiffMin = PrHeightMinLatT - minLatMean,
+         #DiffMean = PrHeightMeanLatT - meanLatMean,
+         #DiffMax = PrHeightMaxLatT - maxLatMean,
+         #sqMin = DiffMin ^ 2,
+         #sqMean = DiffMean ^ 2,
+         #sqMax = DiffMax ^ 2) %>% 
+  # manually calc sd from reference mean
+  #summarise(SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
+            #SDmean = sqrt(sum(sqMean, na.rm = T)/1000),
+            #SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
+  #mutate(CoV_min = SDmin/minLatMean*100,
+         #CoV_mean = SDmean/meanLatMean*100,
+         #CoV_max = SDmax/maxLatMean*100)
+
+#(CVmean2 <- dfCoV %>% filter(GCM != "Ensemble") %>% 
+    #ggplot()+
+    #geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
+    #scale_fill_brewer(palette = "Dark2")+
+    #ylim(0,30)+ylab("CoV (%)")+
+    #facet_wrap(~GCM, ncol = 5)+
+    #theme_bw()+
+    #theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
+          #axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
+          #axis.text.x = element_text(size = 14),
+          #axis.text.y = element_text(size = 14)))
+
+#ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMeanThresholds_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
 
 
 
@@ -359,7 +363,7 @@ for (rcp in lstRCP){
                              low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
         ggtitle(rcp.name)+
-        theme(plot.title = element_text(face="bold",size=16),
+        theme(plot.title = element_text(face="bold",size=20),
               axis.title = element_blank(),
               axis.text = element_blank(),
               axis.ticks = element_blank(),
@@ -386,7 +390,7 @@ legend <- get_legend(p2)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=6, height=8, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=10, height=12, dpi=300)
 
 
 ### arrange in single figure per provenance ------------------------------------
