@@ -338,7 +338,7 @@ lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
 for (rcp in lstRCP){
   
-  #rcp <- lstRCP[1]
+  rcp <- lstRCP[1]
   
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
@@ -350,7 +350,7 @@ for (rcp in lstRCP){
   
   for (prov in lstProv){
     
-    #prov <- lstProv[1]
+    prov <- lstProv[1]
     
     # filter to provenance
     rstsProv1 <- grep(prov, rstsRCP1, value=TRUE)
@@ -397,7 +397,8 @@ for (rcp in lstRCP){
               axis.title = element_blank(),
               axis.text = element_blank(),
               axis.ticks = element_blank(),
-              #legend.title = element_text(face = "bold", vjust = 3)))
+              #legend.title = element_text(size = 18, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 16)))
               legend.position = "none"))
     
     ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=8, height=10, dpi=300)
@@ -420,7 +421,7 @@ legend <- get_legend(p2)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=10, height=12, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=4, height=6, dpi=300)
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -442,3 +443,5 @@ gl <- lapply(rl, grid::rasterGrob)
                                layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
 
 ggsave(c1, file=paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=14, height=12, dpi=300)
+
+
