@@ -102,36 +102,59 @@ dfPredictions$PrHeightMaxLatT[which(dfPredictions$GDD5Future < 527 | dfPredictio
 dfPredictions$GCM <- factor(dfPredictions$GCM)
 dfPredictions$RCP <- factor(dfPredictions$RCP)
 
-(p1 <- dfPredictions %>% 
-  filter(!is.na(PrHeightMeanLatT) & GCM != "Ensemble") %>% 
-  ggplot(aes(x=RCP, y=PrHeightMeanLatT, fill=RCP))+
-  geom_boxplot() +
-  scale_fill_brewer(palette = "Dark2")+
-  stat_summary(fun=mean, geom="point", color="black", size=2, pch=4) +   
-  scale_y_continuous(limits = c(0, 600)) +
-  facet_wrap(~GCM, ncol = 3)+
-  xlab("RCP scenario") +
-  ylab("Height distribution (cm)") +
-  theme_bw() + 
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.ticks.x = element_blank(),
-        legend.title = element_text(size = 14, face = "bold")+
-        strip.text = element_text(face="bold", size = 16)))
-  
-ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=12, height=10, dpi=300)
-
-
-
-### Coefficient of Variation (CoV) ---------------------------------------------
-
 # take 100 random samples of 1000 data points
 dfRandom <- bind_rows(replicate(100, dfPredictions %>% sample_n(1000), simplify=F), .id="Obs")
 dfRandom$RCP <- as.factor(dfRandom$RCP)
 dfRandom$Obs <- as.factor(dfRandom$Obs)
 
+(p1 <- dfRandom %>% 
+  filter(!is.na(PrHeightMeanLatT) & GCM != "Ensemble") %>% 
+  ggplot(aes(x=RCP, y=PrHeightMeanLatT, fill=RCP))+
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Dark2")+
+  stat_summary(fun=mean, geom="point", color="black", size=2, pch=4) +   
+  scale_y_continuous(limits = c(0, 1500)) +
+  facet_wrap(~GCM, ncol = 3)+
+  xlab("RCP scenario") +
+  ylab("Height distribution (cm)") +
+  theme_bw() + 
+  theme(axis.title.x = element_blank(), 
+          axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
+          axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 14),
+          axis.ticks.x = element_blank(),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(face="bold", size = 16)))
+
+ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_thresholdsRM_Nordic_boxplots_2070.png"), width=12, height=10, dpi=300)
+
+(p1a <- dfRandom %>% 
+    filter(!is.na(PrHeightMeanLat) & GCM != "Ensemble") %>% 
+    ggplot(aes(x=RCP, y=PrHeightMeanLat, fill=RCP))+
+    geom_boxplot() +
+    scale_fill_brewer(palette = "Dark2")+
+    stat_summary(fun=mean, geom="point", color="black", size=2, pch=4) +   
+    scale_y_continuous(limits = c(0, 1500)) +
+    facet_wrap(~GCM, ncol = 3)+
+    xlab("RCP scenario") +
+    ylab("Height distribution (cm)") +
+    theme_bw() + 
+    theme(axis.title.x = element_blank(), 
+          axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
+          axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 14),
+          axis.ticks.x = element_blank(),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(face="bold", size = 16)))
+
+ggsave(p1a, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_alldata_Nordic_boxplots_2070.png"), width=12, height=10, dpi=300)
+
+
+### Coefficient of Variation (CoV) ---------------------------------------------
+
+# first with data beyond thresholds removed
 dfCoV <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
   mutate(DiffMin = PrHeightMinLatT - minLatMean,
@@ -155,44 +178,51 @@ dfCoV <- dfRandom %>%
     ylim(0,30)+ylab("CoV (%)")+
     facet_wrap(~GCM, ncol = 3)+
     theme_bw()+
-    theme(axis.title.x = element_text(size = 18, face = "bold", margin = margin(t = 15)), 
+    theme(axis.title.x = element_blank(), 
           axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
-          axis.text.x = element_text(size = 14),
+          axis.text.x = element_blank(),
           axis.text.y = element_text(size = 14),
-          strip.text = element_text(face="bold", size = 16))
+          axis.ticks.x = element_blank(),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(face="bold", size = 16)))
 
-ggsave(CVmean, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_reference_mean.png"), width=12, height=12, dpi=300)
+ggsave(CVmean, file=paste0(dirFigs, "PrHeightMean_thresholdsRM_Nordic_CoV_vs_reference_mean.png"), width=12, height=10, dpi=300)
 
-#dfCoV2 <- dfRandom %>% 
-  #group_by(RCP,GCM,Obs) %>% 
-  #mutate(DiffMin = PrHeightMinLatT - minLatMean,
-         #DiffMean = PrHeightMeanLatT - meanLatMean,
-         #DiffMax = PrHeightMaxLatT - maxLatMean,
-         #sqMin = DiffMin ^ 2,
-         #sqMean = DiffMean ^ 2,
-         #sqMax = DiffMax ^ 2) %>% 
+# now with all data to check difference
+dfCoV2 <- dfRandom %>% 
+  group_by(RCP,GCM,Obs) %>% 
+  mutate(DiffMin = PrHeightMinLat - minLatMean,
+         DiffMean = PrHeightMeanLat - meanLatMean,
+         DiffMax = PrHeightMaxLat - maxLatMean,
+         sqMin = DiffMin ^ 2,
+         sqMean = DiffMean ^ 2,
+         sqMax = DiffMax ^ 2) %>% 
   # manually calc sd from reference mean
-  #summarise(SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
-            #SDmean = sqrt(sum(sqMean, na.rm = T)/1000),
-            #SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
-  #mutate(CoV_min = SDmin/minLatMean*100,
-         #CoV_mean = SDmean/meanLatMean*100,
-         #CoV_max = SDmax/maxLatMean*100)
+  summarise(SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
+            SDmean = sqrt(sum(sqMean, na.rm = T)/1000),
+            SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
+  mutate(CoV_min = SDmin/minLatMean*100,
+         CoV_mean = SDmean/meanLatMean*100,
+         CoV_max = SDmax/maxLatMean*100)
 
-#(CVmean2 <- dfCoV %>% filter(GCM != "Ensemble") %>% 
-    #ggplot()+
-    #geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
-    #scale_fill_brewer(palette = "Dark2")+
-    #ylim(0,30)+ylab("CoV (%)")+
-    #facet_wrap(~GCM, ncol = 5)+
-    #theme_bw()+
-    #theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
-          #axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
-          #axis.text.x = element_text(size = 14),
-          #axis.text.y = element_text(size = 14)))
+(CVmean2 <- dfCoV2 %>% filter(GCM != "Ensemble") %>% 
+    ggplot()+
+    geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
+    scale_fill_brewer(palette = "Dark2")+
+    ylim(0,30)+ylab("CoV (%)")+
+    facet_wrap(~GCM, ncol = 3)+
+    theme_bw()+
+    theme(axis.title.x = element_blank(), 
+          axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
+          axis.text.x = element_blank(),
+          axis.text.y = element_text(size = 14),
+          axis.ticks.x = element_blank(),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(face="bold", size = 16)))
 
-#ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMeanThresholds_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
-
+ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMean_alldata_Nordic_CoV_vs_reference_mean.png"), width=12, height=10, dpi=300)
 
 
 ### Create reclassified rasters (above & below ref mean, plus beyond thresholds) --------
