@@ -18,7 +18,7 @@ library(stringr)
 library(raster)
 library(viridis)
 library(scales)
-library(wesanderson)
+library(ggnewscale)
 
 ### dirs -----------------------------------------------------------------------
 
@@ -78,60 +78,29 @@ dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD
 maxLatMean <- mean(dfReference$PrHeightMaxLat, na.rm = TRUE) # 251.2 cm
 
 
-### apply thresholds -----------------------------------------------------------
+### new var, remove data beyond thresholds -------------------------------------
 
-dfPredictions$PrHeightMinLatRC <- dfPredictions$PrHeightMinLat
-dfPredictions$PrHeightMinLatRC[which(dfPredictions$CenterLat < 52.6 | dfPredictions$CenterLat > 62.6)] <- NA
-dfPredictions$PrHeightMinLatRC[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
+dfPredictions$PrHeightMinLatT <- dfPredictions$PrHeightMinLat
+dfPredictions$PrHeightMinLatT[which(dfPredictions$CenterLat < 52.6 | dfPredictions$CenterLat > 62.6)] <- NA
+dfPredictions$PrHeightMinLatT[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
 
-dfPredictions$PrHeightMeanLatRC <- dfPredictions$PrHeightMeanLat
-dfPredictions$PrHeightMeanLatRC[which(dfPredictions$CenterLat < 59.87 | dfPredictions$CenterLat > 69.87)] <- NA
-dfPredictions$PrHeightMeanLatRC[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
+dfPredictions$PrHeightMeanLatT <- dfPredictions$PrHeightMeanLat
+dfPredictions$PrHeightMeanLatT[which(dfPredictions$CenterLat < 59.87 | dfPredictions$CenterLat > 69.87)] <- NA
+dfPredictions$PrHeightMeanLatT[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
 
-dfPredictions$PrHeightMaxLatRC <- dfPredictions$PrHeightMaxLat
-dfPredictions$PrHeightMaxLatRC[which(dfPredictions$CenterLat < 64.77 | dfPredictions$CenterLat > 74.77)] <- NA
-dfPredictions$PrHeightMaxLatRC[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
+dfPredictions$PrHeightMaxLatT <- dfPredictions$PrHeightMaxLat
+dfPredictions$PrHeightMaxLatT[which(dfPredictions$CenterLat < 64.77 | dfPredictions$CenterLat > 74.77)] <- NA
+dfPredictions$PrHeightMaxLatT[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
 
 
 ### raw height boxplots --------------------------------------------------------
 
-GCMs <- unique(dfPredictions$GCM)
-GCMs <- GCMs[-3] # remove ensemble
-
 dfPredictions$GCM <- factor(dfPredictions$GCM)
 dfPredictions$RCP <- factor(dfPredictions$RCP)
 
-#GCM_boxplots <- list()
-
-#for(i in GCMs) {
-  #GCM_boxplots[[i]] <- ggplot(dfPredictions %>% filter(GCM == i & !is.na(PrHeightMeanLatRC)), aes(x=RCP, y=PrHeightMeanLatRC, fill=RCP)) + 
-    #geom_boxplot() +
-    #scale_fill_brewer(palette = "Dark2")+
-    #stat_summary(fun=mean, geom="point", color="black", size=3) +   
-    #scale_y_continuous(limits = c(0, 600)) +
-    #xlab("RCP scenario") +
-    #ylab("Height distribution (cm)") +
-    #theme_bw() + 
-    #ggtitle(i) + 
-    #theme(plot.title = element_text(size = 20, face = "bold", hjust=0.5), 
-          #axis.title.x = element_text(size = 18, face = "bold"), 
-          #axis.title.y = element_text(size = 18, face = "bold"),
-          #axis.text.x = element_text(size = 16),
-          #axis.text.y = element_text(size = 16))
-  # save
-  #ggsave(GCM_boxplots[[i]], file=paste0(dirFigs,"PrHeightMeanLat_Nordic_Boxplot_2070_", i,".png"), width = 10, height = 10, dpi=300)
-#}
-
-# arrange all plots in one grid next to each other
-#GCMs_boxplots.all <- do.call("grid.arrange", c(GCM_boxplots[1:5], ncol= 5))
-#ggsave(GCMs_boxplots.all, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
-
-
-# tidyverse version
-
 (p1 <- dfPredictions %>% 
-  filter(!is.na(PrHeightMeanLatRC) & GCM != "Ensemble") %>% 
-  ggplot(aes(x=RCP, y=PrHeightMeanLatRC, fill=RCP))+
+  filter(!is.na(PrHeightMeanLatT) & GCM != "Ensemble") %>% 
+  ggplot(aes(x=RCP, y=PrHeightMeanLatT, fill=RCP))+
   geom_boxplot() +
   scale_fill_brewer(palette = "Dark2")+
   stat_summary(fun=mean, geom="point", color="black", size=2, pch=4) +   
@@ -147,6 +116,7 @@ dfPredictions$RCP <- factor(dfPredictions$RCP)
   
 ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
 
+
 ### Coefficient of Variation (CoV) ---------------------------------------------
 
 # take 100 random samples of 1000 data points
@@ -156,13 +126,16 @@ dfRandom$Obs <- as.factor(dfRandom$Obs)
 
 dfCoV <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
-  #mutate(avgMinLat = minLatMean,
-         #avgMeanLat = meanLatMean,
-         #avgMaxLat = maxLatMean) %>% 
-  # manually calc sd against reference mean
-  summarise(SDmin = sqrt(sum((PrHeightMinLat-minLatMean)^2)/1000),
-            SDmean = sqrt(sum((PrHeightMeanLat - meanLatMean)^2)/1000),
-            SDmax = sqrt(sum((PrHeightMaxLat - maxLatMean)^2)/1000)) %>%  
+  mutate(DiffMin = PrHeightMinLat - minLatMean,
+         DiffMean = PrHeightMeanLat - meanLatMean,
+         DiffMax = PrHeightMaxLat - maxLatMean,
+         sqMin = DiffMin ^ 2,
+         sqMean = DiffMean ^ 2,
+         sqMax = DiffMax ^ 2) %>% 
+  # manually calc sd from reference mean
+  summarise(SDmin = sqrt(sum(sqMin)/1000),
+            SDmean = sqrt(sum(sqMean)/1000),
+            SDmax = sqrt(sum(sqMax)/1000)) %>%  
   mutate(CoV_min = SDmin/minLatMean*100,
          CoV_mean = SDmean/meanLatMean*100,
          CoV_max = SDmax/maxLatMean*100)
@@ -181,12 +154,138 @@ dfCoV <- dfRandom %>%
 
 ggsave(CVmean, file=paste0(dirFigs, "PrHeightMean_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
 
+dfCoV2 <- dfRandom %>% 
+  group_by(RCP,GCM,Obs) %>% 
+  mutate(DiffMin = PrHeightMinLatT - minLatMean,
+         DiffMean = PrHeightMeanLatT - meanLatMean,
+         DiffMax = PrHeightMaxLatT - maxLatMean,
+         sqMin = DiffMin ^ 2,
+         sqMean = DiffMean ^ 2,
+         sqMax = DiffMax ^ 2) %>% 
+  # manually calc sd from reference mean
+  summarise(SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
+            SDmean = sqrt(sum(sqMean, na.rm = T)/1000),
+            SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
+  mutate(CoV_min = SDmin/minLatMean*100,
+         CoV_mean = SDmean/meanLatMean*100,
+         CoV_max = SDmax/maxLatMean*100)
+
+(CVmean2 <- dfCoV %>% filter(GCM != "Ensemble") %>% 
+    ggplot()+
+    geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
+    scale_fill_brewer(palette = "Dark2")+
+    ylim(0,30)+ylab("CoV (%)")+
+    facet_wrap(~GCM, ncol = 5)+
+    theme_bw()+
+    theme(axis.title.x = element_text(size = 16, face = "bold", margin = margin(t = 15)), 
+          axis.title.y = element_text(size = 16, face = "bold", margin = margin(r = 15)),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14)))
+
+ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMeanThresholds_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
+
+
+### Create reclassified rasters (above & below ref mean, plus beyond thresholds) ---
+
+pathList <- unique(dfPredictions$path)
+
+# for utm crs
+shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
+utm <- crs(shpSZ)
+
+for (i in pathList){
+  
+  #i <- pathList[1]
+  dfFilter <- dfPredictions %>% filter(path == i)
+  
+  file <- stringr::str_split(i, fixed("_"))[[1]][1]
+  scenario <- stringr::str_split(file, fixed("/"), n=8)[[1]][8]
+  
+  print(paste0("Processing for scenario: ",scenario))
+  
+  print("Apply thresholds to each prediction")
+  
+  # per min/mean/max prediction
+  # create reclass field & threshold field
+  dfFilter$PrHeightMinLatRC <- NA
+  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat >= minLatMean)] <- 1 # above mean = 1
+  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat < minLatMean)] <- -1 # below mean = -1
+  
+  dfFilter$MinThresh <- NA
+  dfFilter$MinThresh[which(dfFilter$CenterLat < 52.6 | dfFilter$CenterLat > 62.6)] <- 1 # beyond threshold = 1
+  dfFilter$MinThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
+  
+  dfFilter$PrHeightMeanLatRC <- NA
+  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat >= meanLatMean)] <- 1
+  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat < meanLatMean)] <- -1
+  
+  dfFilter$MeanThresh <- NA
+  dfFilter$MeanThresh[which(dfFilter$CenterLat < 59.87 | dfFilter$CenterLat > 69.87)] <- 1
+  dfFilter$MeanThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
+  
+  dfFilter$PrHeightMaxLatRC <- NA
+  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat >= maxLatMean)] <- 1
+  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat < maxLatMean)] <- -1
+  
+  dfFilter$MaxThresh <- NA
+  dfFilter$MaxThresh[which(dfFilter$CenterLat < 64.77 | dfFilter$CenterLat > 74.77)] <- 1
+  dfFilter$MaxThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
+  
+  # convert to spatial
+  spP <- dfFilter
+  rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  # rasterise reclass
+  for (var in names(spP)[c(14,16,18)]){ # rasterise performance for 3 reclassed predictions
+    
+    #var <- names(spP)[14]
+    print(paste0("Rasterising for var = ", var))
+    
+    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    
+    writeRaster(rst, paste0(dirOut,"pred_rsts/",var,"_Nordic_",scenario,"_GCMagreement.tif"), overwrite=TRUE)
+    
+    print(paste0("Written raster for: ", var))
+    
+  }
+  
+  # rasterise thresholds
+  for (var in names(spP)[c(15,17,19)]){ # rasterise performance for 3 thresholds
+    
+    #var <- names(spP)[9]
+    print(paste0("Rasterising for var = ", var))
+    
+    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    
+    writeRaster(rst, paste0(dirOut,"pred_rsts/",var,"_Nordic_",scenario,"_modelThresholds.tif"), overwrite=TRUE)
+    
+    print(paste0("Written raster for: ", var))
+    
+  }
+  
+  
+}
 
 ### Spatial agreement between GCMs, per RCP ------------------------------------
 
-# list height tifs 
+# list all tifs 
 rsts <-  list.files(paste0(dirOut, "pred_rsts/"),pattern = "*.tif", full.names = T)
-rsts <- grep("threshold_reclass", rsts, value=TRUE)
+# not mean
+rsts <- grep("bc|mg|mi|no|he", rsts, value=TRUE)
+
+# list reclassed rasters (agreement above or below mean)
+rstsAg <- grep("GCMagreement", rsts, value=TRUE)
+# list reclassed rasters (beyond model thresholds)
+rstsTh <- grep("modelThresholds", rsts, value=TRUE)
 
 lstRCP <- c("26in70","60in70","45in70","85in70")
 
@@ -195,8 +294,10 @@ lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 for (rcp in lstRCP){
   
   #rcp <- lstRCP[1]
-  rstsRCP <- grep(rcp, rsts, value=TRUE)
-  rstsRCP <- rstsRCP[-3] # remove mean
+  
+  rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
+  rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
+  
   rcp.name <- ifelse(grepl("26in70", rcp), 'RCP2.6', 
                      ifelse(grepl("45in70", rcp), 'RCP4.5',
                             ifelse(grepl("60in70", rcp), 'RCP6.0',
@@ -204,60 +305,81 @@ for (rcp in lstRCP){
   
   for (prov in lstProv){
     
-    rstsProv <- grep(prov, rstsRCP, value=TRUE)
+    #prov <- lstProv[1]
     
+    # filter to provenance
+    rstsProv1 <- grep(prov, rstsRCP1, value=TRUE)
+    # need to add ifelse for mean/min/max
+    ifelse(grepl("Min", prov), rstsProv2 <- grep("Min", rstsRCP2, value=TRUE),
+           ifelse(grepl("Mean", prov), rstsProv2 <- grep("Mean", rstsRCP2, value=TRUE),
+                  ifelse(grepl("Max", prov), rstsProv2 <- grep("Max", rstsRCP2, value=TRUE))))
+      
     # raster stack
-    rclassStack <- stack(rstsProv) 
-    print(spplot(rclassStack))
-    
+    rclassStack1 <- stack(rstsProv1) # agreement
+    rclassStack2 <- stack(rstsProv2) # thresholds
+
     print("Provenance results per RCP/GCM read in as stack")
     
     # sum
-    sumStack <- sum(rclassStack[[1]],rclassStack[[2]],rclassStack[[3]],rclassStack[[4]],rclassStack[[5]])
+    sumStack1 <- sum(rclassStack1[[1]],rclassStack1[[2]],rclassStack1[[3]],rclassStack1[[4]],rclassStack1[[5]])
+    sumStack2 <- sum(rclassStack2[[1]],rclassStack2[[2]],rclassStack2[[3]],rclassStack2[[4]],rclassStack2[[5]])
     print("Raster stacks summed")
     
-    spplot(sumStack)
+    spplot(sumStack1) # agreement
+    spplot(sumStack2) # thresholds
     
     # Convert raster to dataframe
-    df <- as.data.frame(sumStack, xy=T)
-    names(df) <- c("x", "y", "GCMagree")
-    my.at <- c(5,4,3,2,1,0,-1,-2,-3,-4,-5)
+    df1 <- as.data.frame(sumStack1, xy=T)
+    names(df1) <- c("x", "y", "GCMagree")
+    df2 <- as.data.frame(sumStack2, xy=T)
+    names(df2) <- c("x", "y", "Threshold")
     
-    cols0 <- c("#003C30","#01665E","#35978F","#80CDC1","#FFDB58", "#F0F0F0", "#D9D9D9", "#BDBDBD", "#969696")
-    cols1 <- colorRampPalette(cols0, space="rgb")(length(my.at))
+    # Palette
+    #my.at <- c(5,4,3,2,1,0,-1,-2,-3,-4,-5)
+    #my.at <- c(5,4,3,0,-3,-4,-5)
+    #cols0 <- c("#003C30","#01665E","#35978F","#80CDC1","#FFDB58", "#F0F0F0", "#D9D9D9", "#BDBDBD", "#969696")
+    #cols0 <- c("#003C30","#01665E","#35978F","#80CDC1","#C7EAE5","#FFDB58","#FEEDDE", "#FDBE85", "#FD8D3C", "#E6550D", "#A63603")
+    #cols0 <- c("#003C30","#01665E","#35978F","#FFDB58","#FD8D3C", "#E6550D", "#A63603")
+    #cols1 <- colorRampPalette(cols0, space="rgb")(length(my.at))
     
-    my.labs <- c("Very likely",
-                 "",
-                 "", 
-                 "",
-                 "",
-                 "Possible",
-                 "",
-                 "",
-                 "",
-                 "",
-                 "Very unlikely")
+    #display.brewer.pal(n = 8, name = 'Greys')
+    #brewer.pal(n = 8, name = "Greys")
     
+    #my.labs <- c("All models agree",
+                 #"",
+                 #"", 
+                 #"",
+                 #"",
+                 #"Uncertain",
+                 #"",
+                 #"",
+                 #"",
+                 #"",
+                 #"No models agree")
     
-    p2 <- ggplot(data = df) + 
-      geom_tile(data = df %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
-      coord_equal()+
-      scale_x_continuous(expand=c(0,0))+
-      scale_y_continuous(expand=c(0,0))+
-      #scale_fill_discrete()+#labels = my.labs)+
-      scale_fill_gradientn(colours=cols1,
-                           values=rescale(my.at),
-                           limits=range(df$GCMagree),
-                           breaks=my.at,#)+#,
-                           labels = my.labs)+
-      labs(fill="Likelihood")+
-      theme_bw()+
-      theme(axis.title = element_blank(),axis.text = element_blank(),axis.ticks = element_blank())
+    (p2 <- ggplot(data = df1) + 
+        geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
+        scale_fill_gradient2("Likelihood", limits = c(-5, 5), 
+                             low = "#A63603", mid = "#FFDB58", high = "#003C30")+
+        #geom_tile(data = df %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
+        #coord_equal()+
+        #scale_x_continuous(expand=c(0,0))+
+        #scale_y_continuous(expand=c(0,0))+
+        #scale_fill_gradientn(colours=cols1,
+                             #values=rescale(my.at),
+                             #limits=range(df$GCMagree),
+                             #breaks=my.at,
+                             #labels = my.labs)+
+        #labs(fill="")+
+        new_scale("fill") +
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.6) +
+        scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), 
+                             low = "#F0F0F0", mid = "#BDBDBD" , high = "#969696")+
+        theme_bw()+
+        ggtitle(rcp.name)+
+        theme(axis.title = element_blank(),axis.text = element_blank(),axis.ticks = element_blank()))
     
-    
-    png(paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), units="cm", width = 12, height = 14, res=1000)
-    print(p2)
-    dev.off()
+    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=10, height=10, dpi=300)
     
     print(paste0("Plot saved for provenance: ",prov))
     
@@ -267,4 +389,30 @@ for (rcp in lstRCP){
   
 }
 
-  
+
+### arrange in single figure per provenance ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
+lstPlots <- grep("GCM", lstPlots, value=TRUE)
+lstPlots <- lstPlots[-c(5,6)]
+
+plots <- lapply(lstPlots,function(x){
+  img <- as.raster(readPNG(x))
+  rasterGrob(img, interpolate = FALSE)
+})
+
+# PDF
+ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.pdf"),width=8.5, height=11, 
+       marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
+
+# OR
+# png
+ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=8.5, height=11, 
+       marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
+
+
