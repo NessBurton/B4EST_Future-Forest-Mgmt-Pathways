@@ -431,7 +431,6 @@ library(png)
 library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
-#lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
 lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
 lstPlots <- lstPlots[c(1,6,7,8,9)]
 lstPlots <- lstPlots[c(2,3,4,5,1)] # specific order for plotting
@@ -443,5 +442,31 @@ gl <- lapply(rl, grid::rasterGrob)
                                layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
 
 ggsave(c1, file=paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=14, height=12, dpi=300)
+
+
+lstPlots2 <- grep("GCM_agreement", lstPlots, value=TRUE)
+lstPlots2 <- lstPlots2[c(1,10:13)]
+lstPlots2 <- lstPlots2[c(2,3,4,5,1)] # specific order for plotting
+
+rl2 <- lapply(lstPlots2, png::readPNG)
+gl2 <- lapply(rl2, grid::rasterGrob)
+(c2 <- gridExtra::grid.arrange(grobs=gl2, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
+
+ggsave(c2, file=paste0(dirFigs,"PrHeightMinLat_Combined.png"),width=14, height=12, dpi=300)
+
+
+lstPlots3 <- grep("GCM_agreement", lstPlots, value=TRUE)
+lstPlots3 <- lstPlots3[c(1:5)]
+lstPlots3 <- lstPlots3[c(2,3,4,5,1)] # specific order for plotting
+
+rl3 <- lapply(lstPlots3, png::readPNG)
+gl3 <- lapply(rl3, grid::rasterGrob)
+(c3 <- gridExtra::grid.arrange(grobs=gl3, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
+
+ggsave(c3, file=paste0(dirFigs,"PrHeightMaxLat_Combined.png"),width=14, height=12, dpi=300)
 
 
