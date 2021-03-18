@@ -300,6 +300,7 @@ lstRCP <- c("26in70","60in70","45in70","85in70")
 lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
 #viridis(11)
+display.brewer.pal(5, "Greys"); brewer.pal(5, "Greys")
 
 for (rcp in lstRCP){
   
@@ -355,7 +356,7 @@ for (rcp in lstRCP){
         geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.5) +
         scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
                              labels = c("Possible", "Likely", "Very likely"),
-                             low = "#F0F0F0", mid = "#BDBDBD" , high = "#969696")+
+                             low = "#F7F7F7", mid = "#969696" , high = "#252525")+
         theme_bw()+
         ggtitle(rcp.name)+
         theme(plot.title = element_text(face="bold",size=16),
