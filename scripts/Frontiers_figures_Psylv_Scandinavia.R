@@ -29,6 +29,7 @@ dirOut <- paste0(dataDrive,"/FFMP-data-processed/Frontiers_manuscript/")
 dirFigs <- paste0(wd,"/Frontiers_figures/")
 
 
+
 ### read in data ---------------------------------------------------------------
 
 # list production prediction files
@@ -56,6 +57,7 @@ dfPredictions$RCP <- ifelse(grepl("26", dfPredictions$path), '2.6',
                                           ifelse(grepl("85", dfPredictions$path), '8.5', 'Reference'))))
 
 
+
 ### climate baseline period means ----------------------------------------------
 
 dfReference <- vroom(files[25])
@@ -78,6 +80,7 @@ dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD
 maxLatMean <- mean(dfReference$PrHeightMaxLat, na.rm = TRUE) # 251.2 cm
 
 
+
 ### new var, remove data beyond thresholds -------------------------------------
 
 dfPredictions$PrHeightMinLatT <- dfPredictions$PrHeightMinLat
@@ -91,6 +94,7 @@ dfPredictions$PrHeightMeanLatT[which(dfPredictions$GDD5Future < 527 | dfPredicti
 dfPredictions$PrHeightMaxLatT <- dfPredictions$PrHeightMaxLat
 dfPredictions$PrHeightMaxLatT[which(dfPredictions$CenterLat < 64.77 | dfPredictions$CenterLat > 74.77)] <- NA
 dfPredictions$PrHeightMaxLatT[which(dfPredictions$GDD5Future < 527 | dfPredictions$GDD5Future > 1349)] <- NA
+
 
 
 ### raw height boxplots --------------------------------------------------------
@@ -115,6 +119,7 @@ dfPredictions$RCP <- factor(dfPredictions$RCP)
         axis.text.y = element_text(size = 14)))
   
 ggsave(p1, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_Nordic_boxplots_2070.png"), width=21, height=5, dpi=300)
+
 
 
 ### Coefficient of Variation (CoV) ---------------------------------------------
@@ -185,7 +190,8 @@ dfCoV2 <- dfRandom %>%
 ggsave(CVmean2, file=paste0(dirFigs, "PrHeightMeanThresholds_Nordic_CoV_vs_reference_mean.png"), width=21, height=5, dpi=300)
 
 
-### Create reclassified rasters (above & below ref mean, plus beyond thresholds) ---
+
+### Create reclassified rasters (above & below ref mean, plus beyond thresholds) --------
 
 pathList <- unique(dfPredictions$path)
 
@@ -275,6 +281,8 @@ for (i in pathList){
   
 }
 
+
+
 ### Spatial agreement between GCMs, per RCP ------------------------------------
 
 # list all tifs 
@@ -290,6 +298,8 @@ rstsTh <- grep("modelThresholds", rsts, value=TRUE)
 lstRCP <- c("26in70","60in70","45in70","85in70")
 
 lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
+
+#viridis(11)
 
 for (rcp in lstRCP){
   
@@ -334,52 +344,28 @@ for (rcp in lstRCP){
     df2 <- as.data.frame(sumStack2, xy=T)
     names(df2) <- c("x", "y", "Threshold")
     
-    # Palette
-    #my.at <- c(5,4,3,2,1,0,-1,-2,-3,-4,-5)
-    #my.at <- c(5,4,3,0,-3,-4,-5)
-    #cols0 <- c("#003C30","#01665E","#35978F","#80CDC1","#FFDB58", "#F0F0F0", "#D9D9D9", "#BDBDBD", "#969696")
-    #cols0 <- c("#003C30","#01665E","#35978F","#80CDC1","#C7EAE5","#FFDB58","#FEEDDE", "#FDBE85", "#FD8D3C", "#E6550D", "#A63603")
-    #cols0 <- c("#003C30","#01665E","#35978F","#FFDB58","#FD8D3C", "#E6550D", "#A63603")
-    #cols1 <- colorRampPalette(cols0, space="rgb")(length(my.at))
-    
-    #display.brewer.pal(n = 8, name = 'Greys')
-    #brewer.pal(n = 8, name = "Greys")
-    
-    #my.labs <- c("All models agree",
-                 #"",
-                 #"", 
-                 #"",
-                 #"",
-                 #"Uncertain",
-                 #"",
-                 #"",
-                 #"",
-                 #"",
-                 #"No models agree")
-    
     (p2 <- ggplot(data = df1) + 
         geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
-        scale_fill_gradient2("Likelihood", limits = c(-5, 5), 
-                             low = "#A63603", mid = "#FFDB58", high = "#003C30")+
-        #geom_tile(data = df %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
-        #coord_equal()+
-        #scale_x_continuous(expand=c(0,0))+
-        #scale_y_continuous(expand=c(0,0))+
-        #scale_fill_gradientn(colours=cols1,
-                             #values=rescale(my.at),
-                             #limits=range(df$GCMagree),
-                             #breaks=my.at,
-                             #labels = my.labs)+
-        #labs(fill="")+
+        #scale_fill_gradientn(colours = cols1)+
+        scale_fill_gradient2("Above reference mean", limits = c(-5, 5), n.breaks = 3,
+                             labels = c("Very unlikely","Possible","Very likely"),
+                             low = "#FDE725FF" , mid = "#21908CFF", high = "#440154FF")+
+        #labs(fill="GCM agreement")+
         new_scale("fill") +
-        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.6) +
-        scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), 
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.5) +
+        scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
+                             labels = c("Possible", "Likely", "Very likely"),
                              low = "#F0F0F0", mid = "#BDBDBD" , high = "#969696")+
         theme_bw()+
         ggtitle(rcp.name)+
-        theme(axis.title = element_blank(),axis.text = element_blank(),axis.ticks = element_blank()))
+        theme(plot.title = element_text(face="bold",size=16),
+              axis.title = element_blank(),
+              axis.text = element_blank(),
+              axis.ticks = element_blank(),
+              #legend.title = element_text(face = "bold", vjust = 3)))
+              legend.position = "none"))
     
-    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=10, height=10, dpi=300)
+    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=8, height=10, dpi=300)
     
     print(paste0("Plot saved for provenance: ",prov))
     
@@ -388,6 +374,17 @@ for (rcp in lstRCP){
   print(paste0("Plots complete for RCP: ", rcp))
   
 }
+
+# get legend
+library(ggpubr)
+
+# Extract the legend. Returns a gtable
+legend <- get_legend(p2)
+
+# Convert to a ggplot and save
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"))
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -398,8 +395,9 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
-lstPlots <- grep("GCM", lstPlots, value=TRUE)
+lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
 lstPlots <- lstPlots[-c(5,6)]
+lstPlots <- lstPlots[c(1,3,2,4)] # specific order for plotting
 
 plots <- lapply(lstPlots,function(x){
   img <- as.raster(readPNG(x))
@@ -407,8 +405,8 @@ plots <- lapply(lstPlots,function(x){
 })
 
 # PDF
-ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.pdf"),width=8.5, height=11, 
-       marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
+#ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.pdf"),width=8.5, height=11, 
+       #marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
 
 # OR
 # png
