@@ -299,8 +299,8 @@ lstRCP <- c("26in70","60in70","45in70","85in70")
 
 lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
-#viridis(11)
-display.brewer.pal(5, "Greys"); brewer.pal(5, "Greys")
+#viridis(11); plasma(11)
+#display.brewer.pal(8, "Greys"); brewer.pal(8, "Greys")
 
 for (rcp in lstRCP){
   
@@ -350,13 +350,13 @@ for (rcp in lstRCP){
         #scale_fill_gradientn(colours = cols1)+
         scale_fill_gradient2("Above reference mean", limits = c(-5, 5), n.breaks = 3,
                              labels = c("Very unlikely","Possible","Very likely"),
-                             low = "#FDE725FF" , mid = "#21908CFF", high = "#440154FF")+
+                             low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
         #labs(fill="GCM agreement")+
         new_scale("fill") +
         geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.5) +
         scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
                              labels = c("Possible", "Likely", "Very likely"),
-                             low = "#F7F7F7", mid = "#969696" , high = "#252525")+
+                             low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
         ggtitle(rcp.name)+
         theme(plot.title = element_text(face="bold",size=16),
@@ -377,15 +377,16 @@ for (rcp in lstRCP){
 }
 
 # get legend
-#library(ggpubr)
+# in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
+library(ggpubr)
 
 # Extract the legend. Returns a gtable
-#legend <- get_legend(p2)
+legend <- get_legend(p2)
 
 # Convert to a ggplot and save
-#legend <- as_ggplot(legend)
-#plot(legend)
-#ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"))
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=6, height=8, dpi=300)
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -398,20 +399,12 @@ lstPlots <- list.files(paste0(dirFigs), full.names = T)
 #lstPlots <- grep("PrHeightMeanLat", lstPlots, value=TRUE)
 lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
 lstPlots <- lstPlots[c(1,6,7,8,9)]
-lstPlots <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
+lstPlots <- lstPlots[c(2,3,4,5,1)] # specific order for plotting
 
-plots <- lapply(lstPlots,function(x){
-  img <- as.raster(readPNG(x))
-  rasterGrob(img, interpolate = FALSE)
-})
+rl <- lapply(lstPlots, png::readPNG)
+gl <- lapply(rl, grid::rasterGrob)
+(c1 <- gridExtra::grid.arrange(grobs=gl, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
 
-# PDF
-#ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.pdf"),width=8.5, height=11, 
-       #marrangeGrob(grobs = plots, nrow=2, ncol=2,top=NULL))
-
-# OR
-# png
-ggsave(paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=8.5, height=11, 
-       marrangeGrob(grobs = plots, nrow=2, ncol=3,top=NULL))
-
-
+ggsave(c1, file=paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=14, height=12, dpi=300)
