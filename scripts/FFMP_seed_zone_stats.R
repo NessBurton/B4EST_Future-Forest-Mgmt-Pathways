@@ -41,30 +41,69 @@ utm <- crs(sfSeedZones)
 # dissolve/merge zones by ZON2 to simplify
 head(sfSeedZones)
 
+# merge some southern seed zones
+#i. 18100, 18200, 18300 and 18400 can be merged into 18
+#ii. 19100, 19200, 19300 and 19400 can be merged into 19
+#iii. 20100 and 20200 can be merged into 20
+
+sfSeedZones$seed.zone <- sfSeedZones$ZON2
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "18100" | 
+                              sfSeedZones$ZON2 == "18200" | 
+                              sfSeedZones$ZON2 == "18300" | 
+                              sfSeedZones$ZON2 == "18400")] <- "18"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "19100" | 
+                              sfSeedZones$ZON2 == "19200" | 
+                              sfSeedZones$ZON2 == "19300" | 
+                              sfSeedZones$ZON2 == "19400")] <- "19"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "20100" | 
+                              sfSeedZones$ZON2 == "20200")] <- "20"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "10000")] <- "10"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "12000")] <- "12"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "13000")] <- "13"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "15000")] <- "15"
+sfSeedZones$seed.zone[which(sfSeedZones$ZON2 == "16000")] <- "16"
+sfSeedZones$seed.zone
+
 # add area to have a variable to be able to summarise
 sfSeedZones$area <- st_area(sfSeedZones) 
 sfSeedZones <-
   sfSeedZones %>%
-  group_by(ZON2) %>% 
+  group_by(seed.zone) %>% 
   summarise(area = sum(area))
 
-unique(sfSeedZones$ZON2)
-zoneOrder <- c("1a","1b","1c","2","3","6","7","10000","12000","13000","15000","16000","18100","18200","18300","18400","19100","19200","19300","19400","20100","20200")
-sfSeedZones$ZON2 <- factor(sfSeedZones$ZON2, ordered = TRUE, levels = zoneOrder)
+unique(sfSeedZones$seed.zone)
+zoneOrder <- c("1a","1b","1c","2","3","6","7","10","12","13","15","16","18","19","20")
+sfSeedZones$seed.zone <- factor(sfSeedZones$seed.zone, ordered = TRUE, levels = zoneOrder)
 
-# plot
-#ggplot(sfSeedZones)+
-  #geom_sf(aes(fill=ZON2),col=NA)+theme_minimal()
+# load country outline
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+sweden <- worldmap[worldmap$name == 'Sweden',]
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- length(unique(sfSeedZones$seed.zone))
+mycolors <- colorRampPalette(brewer.pal(12, "Paired"))(nb.cols)
+
+#png(paste0(wd,"/figures/seed_zones_all.png"), width = 500, height = 600)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones, aes(fill=seed.zone), colour=0)+
+  #scale_fill_brewer(palette = "Paired")+
+  scale_fill_manual(values = mycolors) +
+  theme_bw()+
+  labs(fill = "Seed Zone")
+#dev.off()
 
 # sp version to use for raster::extract later
 spSeedZones <- as_Spatial(sfSeedZones)
 
 # transform points to utm
-sp_ref <- spTransform(sp_ref, CRSobj = utm)
+#sp_ref <- spTransform(sp_ref, CRSobj = utm)
 
 # create an empty raster object to the extent of the points desired resolution
 # res should be 1km - 1000m if UTM, using 1100m to deal with irregular grid (gaps if using 1000m)
-rstUTM <- raster(crs = crs(sp_ref), resolution = c(1100,1100), ext = extent(sp_ref))
+#rstUTM <- raster(crs = crs(sp_ref), resolution = c(1100,1100), ext = extent(sp_ref))
 
 #rstElev <- rasterize(sp_ref, rstUTM, sp_ref$GridAlt, fun=max)
 #crs(rstElev)
@@ -145,14 +184,14 @@ for (f in files){
   dfP$PrProdidxSOhs66[which(dfP$CenterLat > 71 | dfP$CenterLat < 61)] <- NA
   
   # and GDD5
-  dfP$PrProdidxSOh60[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOh62[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOh64[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOh66[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOhs60[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOhs62[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
-  dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- NA
+  dfP$PrProdidxSOh60[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOh62[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOh64[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOh66[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOhs60[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOhs62[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
+  dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   
   print("Convert to spatial, transform to utm")
   
@@ -168,14 +207,14 @@ for (f in files){
   
   # spatial join
   dfP_sf <- st_join(dfP_sf,sfSeedZones)
-  dfP_sf$ZON2 <- factor(dfP_sf$ZON2)
+  dfP_sf$seed.zone <- factor(dfP_sf$seed.zone, ordered = T, levels = zoneOrder)
   
   print("Transform to long format")
   
   df_long <- dfP_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
                        "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
-                       "ZON2")] %>% 
-    filter(!is.na(ZON2)) %>% # filter to just zones
+                       "seed.zone")] %>% 
+    filter(!is.na(seed.zone)) %>% # filter to just zones
     st_drop_geometry() %>%
     pivot_longer(1:8, names_to="seed_orchard",values_to="prod_idx")
   
@@ -187,7 +226,7 @@ for (f in files){
   
   df_summary <- df_long %>% 
     filter(!is.na(prod_idx)) %>% 
-    group_by(ZON2, seed_orchard) %>% # group by zone
+    group_by(as.factor(seed.zone), as.factor(seed_orchard)) %>% # group by zone
     summarise_if(is.numeric,c("mean","sd","IQR","min","max"), na.rm = TRUE) #%>% 
   #summarise(c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66"),.funs=c("mean","sd","IQR","min","max"))
   df_summary$scenario <- scenario
@@ -198,19 +237,23 @@ for (f in files){
   print(paste0("Processed scenario: ",scenario))
   
   if (f == files[25]){
-    vroom_write(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh.csv"))
+    write.csv(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
   }
   
 }
 
-
-df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh.csv"))
+#df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
 head(df_results_summary)
 summary(df_results_summary)
 
-df_results_summary$ZON2 <- factor(df_results_summary$ZON2, ordered=T, levels = zoneOrder)
+df_results_summary$seed.zone <- factor(df_results_summary$seed.zone, ordered=T, levels = zoneOrder)
 
-dfMaster <- df_results_summary
+# all combinations seed orchards & seed zones
+  
+dfMaster <- unique(expand.grid(dfMaster$seed.zone,dfMaster$seed_orchard,stringsAsFactors = T))
+colnames(dfMaster) <- c("seed.zone","seed_orchard")
+  
+dfMaster <- left_join(dfMaster, df_results_summary, by=c("seed.zone","seed_orchard"))
 
 dfMaster$GCM <- ifelse(grepl("bc", dfMaster$scenario), 'bc - BCC-CSM1-1',
                         ifelse(grepl("he", dfMaster$scenario), 'he - HadGEM2-ES',
@@ -221,69 +264,88 @@ dfMaster$GCM <- ifelse(grepl("bc", dfMaster$scenario), 'bc - BCC-CSM1-1',
 dfMaster$RCP <- ifelse(grepl("45", dfMaster$scenario), '4.5',
                        ifelse(grepl("85", dfMaster$scenario), '8.5', 'Baseline'))
 dfMaster$period <- ifelse(grepl("50", dfMaster$scenario), "2050",
-                          ifelse(grepl("70", dfMaster$scenario), '2070', NA))
+                          ifelse(grepl("70", dfMaster$scenario), '2070', '1961-1990'))
 dfMaster$seedOrchard <- substr(dfMaster$seed_orchard, 10,15)
 
 dfMaster$GCM <- factor(dfMaster$GCM)
 dfMaster$RCP <- factor(dfMaster$RCP)
+dfMaster$seed.zone <- factor(dfMaster$seed.zone, ordered=T, levels = zoneOrder)
 dfMaster$seedOrchard <- factor(dfMaster$seedOrchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+
 
 # RCP4.5
 df4.5 <- dfMaster %>%
-  #filter(period == "2050") %>% 
+  #filter(period != "1961-1990") %>% 
   filter(RCP %in% c("Baseline","8.5")==FALSE) %>% 
   filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
-  group_by(ZON2,period,seedOrchard) %>% 
+  group_by(seed.zone,period,seedOrchard) %>% 
   summarise(n_GCMs = n(),
-            n_m120 = sum(mean > 120),
-            n_m110 = sum(mean > 110))
+            n_p120 = sum(mean < 120),
+            n_p110 = sum(mean < 110),
+            n_m120 = sum(mean >= 120),
+            n_m110 = sum(mean >= 110))
+
+df4.5$seed.zone <- factor(df4.5$seed.zone, ordered=T, levels = zoneOrder)
+df4.5$seedOrchard <- factor(df4.5$seedOrchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
 
 # plot agreement above 120% prodidx
 
-df4.5 <- df4.5 %>% ungroup()
-df4.5$trafficLight <- NA
-df4.5$trafficLight[which(df4.5$n_m120==5)] <- "All GCMs"
-df4.5$trafficLight[which(df4.5$n_m120==4)] <- "4 GCMs"
-df4.5$trafficLight[which(df4.5$n_m120==3)] <- "3 GCMs"
-df4.5$trafficLight[which(df4.5$n_m120==2)] <- "2 GCMs"
-df4.5$trafficLight[which(df4.5$n_m120==1)] <- "1 GCM"
-df4.5$trafficLight[which(df4.5$n_m120==0)] <- "No GCMs"
-df4.5$trafficLight[which(is.na(df4.5$n_m120))] <- "Beyond model threshold"
+#df4.5 <- df4.5 %>% ungroup()
+df4.5$likelihood120 <- NA
+df4.5$likelihood120[which(df4.5$n_m120==5)] <- "Very likely"
+df4.5$likelihood120[which(df4.5$n_m120==4)] <- "More likely than not"
+df4.5$likelihood120[which(df4.5$n_m120==3)] <- "More likey than not"
+df4.5$likelihood120[which(df4.5$n_m120==2)] <- "Possible"
+df4.5$likelihood120[which(df4.5$n_m120==1)] <- "Possible"
+df4.5$likelihood120[which(df4.5$n_m120==0)] <- "Very unlikely"
+df4.5$likelihood120[which(df4.5$n_p120==5)] <- "Very unlikely"
+df4.5$likelihood120[which(df4.5$n_p120==4)] <- "More unlikely than not"
+df4.5$likelihood120[which(df4.5$n_p120==3)] <- "More unlikely than not"
+df4.5$likelihood120[which(df4.5$n_p120==2)] <- "Possible"
+df4.5$likelihood120[which(df4.5$n_p120==1)] <- "Possible"
+df4.5$likelihood120[which(df4.5$n_p120==0)] <- "Very unlikely"
+#df4.5$likelihood120[which(is.na(df4.5$n_m120))] <- "Beyond model threshold"
 
-df4.5$trafficLight <- factor(df4.5$trafficLight, ordered = T,
-                             levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
+df4.5$likelihood120 <- factor(df4.5$likelihood120, ordered = T,
+                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Very unlikely"))
 
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 800)
 ggplot(df4.5)+
-  geom_tile(aes(seedOrchard,period, fill=trafficLight))+
+  geom_tile(aes(seedOrchard,period, fill=likelihood120))+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
   coord_flip()+
-  facet_wrap(~ZON2, nrow = 11, ncol=2)+
+  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed orchard")+
-  labs(fill="Agreement")
+  labs(fill="Likelihood")
 dev.off()
 
 # plot agreement above 110% prodidx
 
-df4.5$trafficLight2 <- NA
-df4.5$trafficLight2[which(df4.5$n_m110==5)] <- "All GCMs"
-df4.5$trafficLight2[which(df4.5$n_m110==4)] <- "4 GCMs"
-df4.5$trafficLight2[which(df4.5$n_m110==3)] <- "3 GCMs"
-df4.5$trafficLight2[which(df4.5$n_m110==2)] <- "2 GCMs"
-df4.5$trafficLight2[which(df4.5$n_m110==1)] <- "1 GCM"
-df4.5$trafficLight2[which(df4.5$n_m110==0)] <- "No GCMs"
-df4.5$trafficLight2[which(is.na(df4.5$n_m110))] <- "Beyond model threshold"
+df4.5$likelihood110 <- NA
+df4.5$likelihood110[which(df4.5$n_m110==5)] <- "Very likely"
+df4.5$likelihood110[which(df4.5$n_m110==4)] <- "More likely than not"
+df4.5$likelihood110[which(df4.5$n_m110==3)] <- "More likey than not"
+df4.5$likelihood110[which(df4.5$n_m110==2)] <- "Possible"
+df4.5$likelihood110[which(df4.5$n_m110==1)] <- "Possible"
+df4.5$likelihood110[which(df4.5$n_m110==0)] <- "Very unlikely"
+df4.5$likelihood110[which(df4.5$n_p110==5)] <- "Very unlikely"
+df4.5$likelihood110[which(df4.5$n_p110==4)] <- "More unlikely than not"
+df4.5$likelihood110[which(df4.5$n_p110==3)] <- "More unlikely than not"
+df4.5$likelihood110[which(df4.5$n_p110==2)] <- "Possible"
+df4.5$likelihood110[which(df4.5$n_p110==1)] <- "Possible"
+df4.5$likelihood110[which(df4.5$n_p110==0)] <- "Very unlikely"
+#df4.5$likelihood110[which(is.na(df4.5$n_m110))] <- "Beyond model threshold"
 
-df4.5$trafficLight2 <- factor(df4.5$trafficLight2, ordered = T,
-                             levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
+df4.5$likelihood110 <- factor(df4.5$likelihood110, ordered = T,
+                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Very unlikely"))
 
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5.png"), width = 600, height = 800)
 ggplot(df4.5)+
-  geom_tile(aes(seedOrchard,period, fill=trafficLight2))+
+  geom_tile(aes(seedOrchard,period, fill=likelihood110))+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
   coord_flip()+
-  facet_wrap(~ZON2, nrow = 11, ncol=2)+
+  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
   theme_bw()+
   ylab("RCP")+xlab("Seed orchard")+
   labs(fill="Agreement")
@@ -313,7 +375,7 @@ dev.off()
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5_spatial.png"), width = 1000, height = 800)
 ggplot()+
   geom_sf(data = sweden, fill=NA)+
-  geom_sf(data=sfSeedZones4.5, aes(fill=trafficLight2), colour=0)+
+  geom_sf(data=sfSeedZones4.5, aes(fill=likelihood110), colour=0)+
   scale_fill_brewer(palette = "RdYlGn", direction = -1)+
   facet_grid(seedOrchard~period)+
   theme_bw()+
