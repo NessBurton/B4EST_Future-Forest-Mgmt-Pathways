@@ -52,74 +52,97 @@ for (f in files){
   
   # per seed orchard
   
+  ### 60 degrees lat -----------------------------------------------------------
   # create reclass field 
   dfP$PrProdidxSOh60RC <- NA
-  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60>=1.2)] <- 1
-  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60<1.2)] <- 0
-  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60RC != 1 & dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- -1
-  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60RC != 1 & dfP$PrSurvSOh60 < 0.5)] <- -1
-  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60RC != 1 & dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- -1
+  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOh60RC[which(dfP$PrProdidxSOh60<1.2)] <- -1 # below 120
   
+  # create threshold field
+  dfP$PrProdidxSOh60T <- NA
+  dfP$PrProdidxSOh60T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 1
+  dfP$PrProdidxSOh60T[which(dfP$PrSurvSOh60 < 0.5)] <- 1
+  dfP$PrProdidxSOh60T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
   
+  # create reclass field 
+  dfP$PrProdidxSOhs60RC <- NA
+  dfP$PrProdidxSOhs60RC[which(dfP$PrProdidxSOhs60>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOhs60RC[which(dfP$PrProdidxSOhs60<1.2)] <- -1 # below 120
+  
+  # create threshold field
+  dfP$PrProdidxSOhs60T <- NA
+  dfP$PrProdidxSOhs60T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 1
+  dfP$PrProdidxSOhs60T[which(dfP$PrSurvSOhs60 < 0.5)] <- 1
+  dfP$PrProdidxSOhs60T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
+  
+  ### 62 degrees lat -----------------------------------------------------------
+  # create reclass field 
   dfP$PrProdidxSOh62RC <- NA
-  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62>=1.2)] <- 1
-  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62<1.2)] <- 0
-  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62RC != 1 & dfP$CenterLat < 57 | dfP$CenterLat > 67)] <- -1
-  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62RC != 1 & dfP$PrSurvSOh62 < 0.5)] <- -1
-  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62RC != 1 & dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- -1
+  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOh62RC[which(dfP$PrProdidxSOh62<1.2)] <- -1 # below 120
   
+  # create threshold field
+  dfP$PrProdidxSOh62T <- NA
+  dfP$PrProdidxSOh62T[which(dfP$CenterLat < 57 | dfP$CenterLat > 67)] <- 1
+  dfP$PrProdidxSOh62T[which(dfP$PrSurvSOh62 < 0.5)] <- 1
+  dfP$PrProdidxSOh62T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
   
+  # create reclass field 
+  dfP$PrProdidxSOhs62RC <- NA
+  dfP$PrProdidxSOhs62RC[which(dfP$PrProdidxSOhs62>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOhs62RC[which(dfP$PrProdidxSOhs62<1.2)] <- -1 # below 120
+  
+  # create threshold field
+  dfP$PrProdidxSOhs62T <- NA
+  dfP$PrProdidxSOhs62T[which(dfP$CenterLat < 57 | dfP$CenterLat > 67)] <- 1
+  dfP$PrProdidxSOhs62T[which(dfP$PrSurvSOhs62 < 0.5)] <- 1
+  dfP$PrProdidxSOhs62T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
+  
+  ### 64 degrees lat -----------------------------------------------------------
+  # create reclass field 
   dfP$PrProdidxSOh64RC <- NA
-  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64>=1.2)] <- 1
-  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64<1.2)] <- 0
-  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64RC != 1 & dfP$CenterLat < 59 | dfP$CenterLat > 69)] <- -1
-  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64RC != 1 & dfP$PrSurvSOh64 < 0.5)] <- -1
-  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64RC != 1 & dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- -1
- 
+  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOh64RC[which(dfP$PrProdidxSOh64<1.2)] <- -1 # below 120
   
+  # create threshold field
+  dfP$PrProdidxSOh64T <- NA
+  dfP$PrProdidxSOh64T[which(dfP$CenterLat < 59 | dfP$CenterLat > 69)] <- 1
+  dfP$PrProdidxSOh64T[which(dfP$PrSurvSOh64 < 0.5)] <- 1
+  dfP$PrProdidxSOh64T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
+  
+  # create reclass field 
+  dfP$PrProdidxSOhs64RC <- NA
+  dfP$PrProdidxSOhs64RC[which(dfP$PrProdidxSOhs64>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOhs64RC[which(dfP$PrProdidxSOhs64<1.2)] <- -1 # below 120
+  
+  # create threshold field
+  dfP$PrProdidxSOhs64T <- NA
+  dfP$PrProdidxSOhs64T[which(dfP$CenterLat < 59 | dfP$CenterLat > 69)] <- 1
+  dfP$PrProdidxSOhs64T[which(dfP$PrSurvSOhs64 < 0.5)] <- 1
+  dfP$PrProdidxSOhs64T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
+  
+  ### 66 degrees lat -----------------------------------------------------------
+  # create reclass field 
   dfP$PrProdidxSOh66RC <- NA
-  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66>=1.2)] <- 1
-  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66<1.2)] <- 0
-  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66RC != 1 & dfP$CenterLat < 61 | dfP$CenterLat > 71)] <- -1
-  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66RC != 1 & dfP$PrSurvSOh66 < 0.5)] <- -1
-  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66RC != 1 & dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- -1
- 
+  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOh66RC[which(dfP$PrProdidxSOh66<1.2)] <- -1 # below 120
   
-  # SOh60
-  #dfP$PrProdidxSOh60T <- dfP$PrProdidxSOh60
-  # lat
-  #dfP$PrProdidxSOh60T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 9999
-  # surv
-  #dfP$PrProdidxSOh60T[which(dfP$PrSurvSOh60 < 0.5)] <- 8888
-  # GDD5
-  #dfP$PrProdidxSOh60T[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- 7777
+  # create threshold field
+  dfP$PrProdidxSOh66T <- NA
+  dfP$PrProdidxSOh66T[which(dfP$CenterLat < 61 | dfP$CenterLat > 71)] <- 1
+  dfP$PrProdidxSOh66T[which(dfP$PrSurvSOh66 < 0.5)] <- 1
+  dfP$PrProdidxSOh66T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
   
-  # SOh62
-  #dfP$PrProdidxSOh62T <- dfP$PrProdidxSOh62
-  # lat
-  #dfP$PrProdidxSOh62T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 9999
-  # surv
-  #dfP$PrProdidxSOh62T[which(dfP$PrSurvSOh62 < 0.5)] <- 8888
-  # GDD5
-  #dfP$PrProdidxSOh62T[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- 7777
+  # create reclass field 
+  dfP$PrProdidxSOhs66RC <- NA
+  dfP$PrProdidxSOhs66RC[which(dfP$PrProdidxSOhs66>=1.2)] <- 1 # above 120
+  dfP$PrProdidxSOhs66RC[which(dfP$PrProdidxSOhs66<1.2)] <- -1 # below 120
   
-  # SOh64
-  #dfP$PrProdidxSOh64T <- dfP$PrProdidxSOh64
-  # lat
-  #dfP$PrProdidxSOh64T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 9999
-  # surv
-  #dfP$PrProdidxSOh64T[which(dfP$PrSurvSOh64 < 0.5)] <- 8888
-  # GDD5
-  #dfP$PrProdidxSOh64T[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- 7777
-  
-  # SOh66
-  #dfP$PrProdidxSOh66T <- dfP$PrProdidxSOh66
-  # lat
-  #dfP$PrProdidxSOh66T[which(dfP$CenterLat < 55 | dfP$CenterLat > 65)] <- 9999
-  # surv
-  #dfP$PrProdidxSOh66T[which(dfP$PrSurvSOh66 < 0.5)] <- 8888
-  # GDD5
-  #dfP$PrProdidxSOh66T[which(dfP$GDD5Future < 500 | dfP$GDD5Future > 1400)] <- 7777
+  # create threshold field
+  dfP$PrProdidxSOhs66T <- NA
+  dfP$PrProdidxSOhs66T[which(dfP$CenterLat < 61 | dfP$CenterLat > 71)] <- 1
+  dfP$PrProdidxSOhs66T[which(dfP$PrSurvSOhs66 < 0.5)] <- 1
+  dfP$PrProdidxSOhs66T[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- 1
   
   print("Convert to spatial points")
   
@@ -137,44 +160,33 @@ for (f in files){
   print(paste0("Loop through seed orchard performance and rasterise"))
   
   # rasterise reclass
-  for (var in names(dfP)[33:36]){ # rasterise performance for 4 seed orchards
+  for (var in names(dfP)[c(33,35,37,39,41,43,45,47)]){ # rasterise performance for 3 reclassed predictions
     
-    #var <- names(dfP)[17]
-    print(paste0("Rasterising for var = ", var))
-    rstP <- rasterize(dfP, rstUTM, dfP[[var]], fun=max) # unsure of use of max function here
+    #var <- names(dfP)[33]
+    #print(paste0("Rasterising for var = ", var))
     
-    writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,"_reclass.tif"),overwrite=TRUE)
+    rst <- rasterize(dfP, rstUTM, dfP[[var]], fun=max, na.rm=TRUE) 
+    
+    writeRaster(rst, paste0(dirOut,"D4.4_prodidx_rsts/",var,"_Sweden_",scenario,"_GCMagreement.tif"), overwrite=TRUE)
+    
     print(paste0("Written raster for: ", var))
-  
+    
   }
   
-  # rasterise no thresholds
-  #for (var in names(dfP)[17:20]){ # rasterise performance for 4 seed orchards
+  # rasterise thresholds
+  for (var in names(dfP)[c(34,36,38,40,42,44,46,48)]){ # rasterise performance for 3 thresholds
     
-    #var <- names(dfP)[17]
+    #var <- names(dfP)[33]
     #print(paste0("Rasterising for var = ", var))
     
-    # rasterise 
-    #rstP <- rasterize(dfP, rstUTM, dfP[[var]], fun=max) # unsure of use of max function here
+    rst <- rasterize(dfP, rstUTM, dfP[[var]], fun=max, na.rm=TRUE) 
     
-    #writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,".tif"),overwrite=TRUE)
-    #print(paste0("Written raster for: ", var))
+    writeRaster(rst, paste0(dirOut,"D4.4_prodidx_rsts/",var,"_Sweden_",scenario,"_modelThresholds.tif"), overwrite=TRUE)
     
-  #}
+    print(paste0("Written raster for: ", var))
+    
+  }
   
-  # rasterise with thresholds
-  #for (var in names(dfP)[33:36]){ # rasterise performance for 4 seed orchards
-    
-    #var <- names(dfP)[17]
-    #print(paste0("Rasterising for var = ", var))
-    
-    # rasterise 
-    #rstP <- rasterize(dfP, rstUTM, dfP[[var]], fun=max) # unsure of use of max function here
-    
-      #writeRaster(rstP, paste0(dirOut,"ProdIdx_rst/",var,"_",scenario,"_thresholds.tif"),overwrite=TRUE)
-    #print(paste0("Written raster for: ", var))
-    
-  #}
   
 }
 
