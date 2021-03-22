@@ -20,6 +20,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(vroom)
 library(rnaturalearth)
+library(viridis)
 
 ### reference data -------------------------------------------------------------
 
@@ -154,7 +155,7 @@ scenario_list <- c()
 
 for (f in files){
   
-  #f <- files[1]
+  f <- files[1]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
@@ -227,7 +228,7 @@ for (f in files){
   df_summary <- df_long %>% 
     filter(!is.na(prod_idx)) %>% 
     group_by(as.factor(seed.zone), as.factor(seed_orchard)) %>% # group by zone
-    summarise_if(is.numeric,c("mean","sd","IQR","min","max"), na.rm = TRUE) #%>% 
+    summarise_if(is.numeric,c("mean","sd","IQR","min","max")) #%>% 
   #summarise(c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66"),.funs=c("mean","sd","IQR","min","max"))
   df_summary$scenario <- scenario
   
@@ -245,15 +246,23 @@ for (f in files){
 #df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
 head(df_results_summary)
 summary(df_results_summary)
-
-df_results_summary$seed.zone <- factor(df_results_summary$seed.zone, ordered=T, levels = zoneOrder)
+colnames(df_results_summary) <- c("seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
 
 # all combinations seed orchards & seed zones
-  
-dfMaster <- unique(expand.grid(dfMaster$seed.zone,dfMaster$seed_orchard,stringsAsFactors = T))
-colnames(dfMaster) <- c("seed.zone","seed_orchard")
-  
-dfMaster <- left_join(dfMaster, df_results_summary, by=c("seed.zone","seed_orchard"))
+orchards <- c("PrProdidxSOh60",
+              "PrProdidxSOhs60",
+              "PrProdidxSOh62",
+              "PrProdidxSOhs62",
+              "PrProdidxSOh64",
+              "PrProdidxSOhs64",
+              "PrProdidxSOh66",
+              "PrProdidxSOhs66")
+dfSZSO <- expand.grid(zoneOrder,orchards,stringsAsFactors = T)
+head(dfSZSO)
+colnames(dfSZSO) <- c("seed.zone","seed.orchard")
+dfSZSO <- data.frame(lapply(dfSZSO, as.character), stringsAsFactors=FALSE)
+
+dfMaster <- left_join(dfSZSO, df_results_summary, by=c("seed.zone","seed.orchard"), all.x=TRUE)
 
 dfMaster$GCM <- ifelse(grepl("bc", dfMaster$scenario), 'bc - BCC-CSM1-1',
                         ifelse(grepl("he", dfMaster$scenario), 'he - HadGEM2-ES',
@@ -263,182 +272,288 @@ dfMaster$GCM <- ifelse(grepl("bc", dfMaster$scenario), 'bc - BCC-CSM1-1',
                                                     ifelse(grepl("Ref", dfMaster$scenario), "Baseline", 'Mean all GCMs'))))))
 dfMaster$RCP <- ifelse(grepl("45", dfMaster$scenario), '4.5',
                        ifelse(grepl("85", dfMaster$scenario), '8.5', 'Baseline'))
-dfMaster$period <- ifelse(grepl("50", dfMaster$scenario), "2050",
-                          ifelse(grepl("70", dfMaster$scenario), '2070', '1961-1990'))
-dfMaster$seedOrchard <- substr(dfMaster$seed_orchard, 10,15)
+dfMaster$period <- ifelse(grepl("50", dfMaster$scenario), "2041-2060",
+                          ifelse(grepl("70", dfMaster$scenario), '2061-2080', '1971-2017'))
+dfMaster$seed.orchard <- substr(dfMaster$seed.orchard, 10,15)
 
 dfMaster$GCM <- factor(dfMaster$GCM)
 dfMaster$RCP <- factor(dfMaster$RCP)
 dfMaster$seed.zone <- factor(dfMaster$seed.zone, ordered=T, levels = zoneOrder)
-dfMaster$seedOrchard <- factor(dfMaster$seedOrchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
 
 
 # RCP4.5
 df4.5 <- dfMaster %>%
   #filter(period != "1961-1990") %>% 
-  filter(RCP %in% c("Baseline","8.5")==FALSE) %>% 
-  filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
-  group_by(seed.zone,period,seedOrchard) %>% 
+  filter(RCP != "8.5") %>% 
+  #filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
+  group_by(seed.zone,period,seed.orchard) %>% 
   summarise(n_GCMs = n(),
-            n_p120 = sum(mean < 120),
-            n_p110 = sum(mean < 110),
-            n_m120 = sum(mean >= 120),
-            n_m110 = sum(mean >= 110))
+            above120 = sum(mean >= 120, na.rm = T),
+            above110 = sum(mean >= 110, na.rm = T),
+            above100 = sum(mean >= 100, na.rm = T),
+            less100 = sum(mean < 100, na.rm = T))
 
+# make sure all seed zones & seed orchards present
+df4.5 <- left_join(dfSZSO,df4.5,by=c("seed.zone"), all.x=TRUE)
+df4.5$seed.orchard.x <- NULL
+colnames(df4.5)[3] <- "seed.orchard"
 df4.5$seed.zone <- factor(df4.5$seed.zone, ordered=T, levels = zoneOrder)
-df4.5$seedOrchard <- factor(df4.5$seedOrchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+df4.5$seed.orchard <- factor(df4.5$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
 
 # plot agreement above 120% prodidx
-
-#df4.5 <- df4.5 %>% ungroup()
 df4.5$likelihood120 <- NA
-df4.5$likelihood120[which(df4.5$n_m120==5)] <- "Very likely"
-df4.5$likelihood120[which(df4.5$n_m120==4)] <- "More likely than not"
-df4.5$likelihood120[which(df4.5$n_m120==3)] <- "More likey than not"
-df4.5$likelihood120[which(df4.5$n_m120==2)] <- "Possible"
-df4.5$likelihood120[which(df4.5$n_m120==1)] <- "Possible"
-df4.5$likelihood120[which(df4.5$n_m120==0)] <- "Very unlikely"
-df4.5$likelihood120[which(df4.5$n_p120==5)] <- "Very unlikely"
-df4.5$likelihood120[which(df4.5$n_p120==4)] <- "More unlikely than not"
-df4.5$likelihood120[which(df4.5$n_p120==3)] <- "More unlikely than not"
-df4.5$likelihood120[which(df4.5$n_p120==2)] <- "Possible"
-df4.5$likelihood120[which(df4.5$n_p120==1)] <- "Possible"
-df4.5$likelihood120[which(df4.5$n_p120==0)] <- "Very unlikely"
-#df4.5$likelihood120[which(is.na(df4.5$n_m120))] <- "Beyond model threshold"
+df4.5$likelihood120[which(df4.5$above120>=5)] <- "Very likely"
+df4.5$likelihood120[which(df4.5$above120==4)] <- "More likely than not"
+df4.5$likelihood120[which(df4.5$above120==3)] <- "More likely than not"
+df4.5$likelihood120[which(df4.5$above120==2)] <- "Possible"
+df4.5$likelihood120[which(df4.5$above120==1)] <- "Possible"
+df4.5$likelihood120[which(df4.5$above120==0)] <- "Unlikely"
+
 
 df4.5$likelihood120 <- factor(df4.5$likelihood120, ordered = T,
-                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Very unlikely"))
+                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 800)
-ggplot(df4.5)+
-  geom_tile(aes(seedOrchard,period, fill=likelihood120))+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+df4.5 %>% filter(!is.na(df4.5$period)) %>%
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=likelihood120))+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1, labels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"), drop=FALSE)+
+  scale_fill_viridis(discrete=T, direction = -1)+
   coord_flip()+
   facet_wrap(~seed.zone, nrow = 11, ncol=2)+
   theme_bw()+
-  ylab("RCP")+xlab("Seed orchard")+
+  ylab("Time period")+xlab("Seed orchard")+
   labs(fill="Likelihood")
 dev.off()
 
-# plot agreement above 110% prodidx
 
+# plot agreement above 110% prodidx
 df4.5$likelihood110 <- NA
-df4.5$likelihood110[which(df4.5$n_m110==5)] <- "Very likely"
-df4.5$likelihood110[which(df4.5$n_m110==4)] <- "More likely than not"
-df4.5$likelihood110[which(df4.5$n_m110==3)] <- "More likey than not"
-df4.5$likelihood110[which(df4.5$n_m110==2)] <- "Possible"
-df4.5$likelihood110[which(df4.5$n_m110==1)] <- "Possible"
-df4.5$likelihood110[which(df4.5$n_m110==0)] <- "Very unlikely"
-df4.5$likelihood110[which(df4.5$n_p110==5)] <- "Very unlikely"
-df4.5$likelihood110[which(df4.5$n_p110==4)] <- "More unlikely than not"
-df4.5$likelihood110[which(df4.5$n_p110==3)] <- "More unlikely than not"
-df4.5$likelihood110[which(df4.5$n_p110==2)] <- "Possible"
-df4.5$likelihood110[which(df4.5$n_p110==1)] <- "Possible"
-df4.5$likelihood110[which(df4.5$n_p110==0)] <- "Very unlikely"
-#df4.5$likelihood110[which(is.na(df4.5$n_m110))] <- "Beyond model threshold"
+df4.5$likelihood110[which(df4.5$above110>=5)] <- "Very likely"
+df4.5$likelihood110[which(df4.5$above110==4)] <- "More likely than not"
+df4.5$likelihood110[which(df4.5$above110==3)] <- "More likely than not"
+df4.5$likelihood110[which(df4.5$above110==2)] <- "Possible"
+df4.5$likelihood110[which(df4.5$above110==1)] <- "Possible"
+df4.5$likelihood110[which(df4.5$above110==0)] <- "Unlikely"
 
 df4.5$likelihood110 <- factor(df4.5$likelihood110, ordered = T,
-                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Very unlikely"))
+                             levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
 png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5.png"), width = 600, height = 800)
-ggplot(df4.5)+
-  geom_tile(aes(seedOrchard,period, fill=likelihood110))+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+df4.5 %>%  filter(!is.na(df4.5$period)) %>% 
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=likelihood110))+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
   coord_flip()+
   facet_wrap(~seed.zone, nrow = 11, ncol=2)+
   theme_bw()+
-  ylab("RCP")+xlab("Seed orchard")+
-  labs(fill="Agreement")
+  ylab("Time period")+xlab("Seed orchard")+
+  labs(fill="Likelihood")
 dev.off()
 
 # could join back & plot spatially
-df4.5$ZON2 <- factor(df4.5$ZON2,ordered = T, levels=zoneOrder)
-sfSeedZones4.5 <- left_join(sfSeedZones,df4.5,by="ZON2")
+df4.5$seed.zone <- factor(df4.5$seed.zone,ordered = T, levels=zoneOrder)
+sfSeedZones4.5 <- left_join(sfSeedZones,df4.5,by="seed.zone")
 
 # load country outline
 worldmap <- ne_countries(scale = 'medium', type = 'map_units',
                          returnclass = 'sf')
 sweden <- worldmap[worldmap$name == 'Sweden',]
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5_spatial.png"), width = 1000, height = 800)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5_spatial.png"), width = 800, height = 1000)
 ggplot()+
   geom_sf(data = sweden, fill=NA)+
-  geom_sf(data=sfSeedZones4.5, aes(fill=trafficLight), colour=0)+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
-  facet_grid(seedOrchard~period)+
-  theme_bw()+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())+
-  labs(fill = "GCM agreement production index > 120%")
-dev.off()
-
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5_spatial.png"), width = 1000, height = 800)
-ggplot()+
-  geom_sf(data = sweden, fill=NA)+
-  geom_sf(data=sfSeedZones4.5, aes(fill=likelihood110), colour=0)+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
-  facet_grid(seedOrchard~period)+
-  theme_bw()+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())+
-  labs(fill = "GCM agreement production index > 110%")
-dev.off()
-
-# RCP8.5
-df8.5 <- dfMaster %>%
-  #filter(period == "2050") %>% 
-  filter(RCP %in% c("Baseline","4.5")==FALSE) %>% 
-  filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
-  group_by(ZON2,period,seedOrchard) %>% 
-  summarise(n_GCMs = n(),
-            n_m120 = sum(mean > 120),
-            n_m110 = sum(mean > 110))
-
-head(df8.5)
-
-df8.5 <- df8.5 %>% ungroup()
-df8.5$trafficLight <- NA
-df8.5$trafficLight[which(df8.5$n_m120==5)] <- "All GCMs"
-df8.5$trafficLight[which(df8.5$n_m120==4)] <- "4 GCMs"
-df8.5$trafficLight[which(df8.5$n_m120==3)] <- "3 GCMs"
-df8.5$trafficLight[which(df8.5$n_m120==2)] <- "2 GCMs"
-df8.5$trafficLight[which(df8.5$n_m120==1)] <- "1 GCM"
-df8.5$trafficLight[which(df8.5$n_m120==0)] <- "No GCMs"
-df8.5$trafficLight[which(is.na(df8.5$n_m120))] <- "Beyond model threshold"
-
-df8.5$trafficLight <- factor(df8.5$trafficLight, ordered = T,
-                             levels = c("All GCMs","4 GCMs","3 GCMs","2 GCMs","1 GCM","No GCMs","Beyond model threshold"))
-
-
-head(df8.5)
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5.png"), width = 600, height = 800)
-ggplot(df8.5)+
-  geom_tile(aes(seedOrchard,period, fill=trafficLight))+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
-  coord_flip()+
-  facet_wrap(~ZON2, nrow = 11, ncol=2)+
-  theme_bw()+
-  ylab("RCP")+xlab("Seed orchard")+
-  #ggtitle("Likelihood of seed orchard performance > 120 under RCP8.5")+
-  labs(fill="Likelihood")
-dev.off()
-
-# could join back & plot spatially
-df8.5$ZON2 <- factor(df8.5$ZON2,ordered = T, levels=zoneOrder)
-
-sfSeedZones8.5 <- left_join(sfSeedZones,df8.5,by="ZON2")
-
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5_spatial.png"), width = 1000, height = 800)
-ggplot()+
-  geom_sf(data = sweden, fill=NA)+
-  geom_sf(data=sfSeedZones8.5, aes(fill=trafficLight), colour=0)+
-  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
-  facet_grid(seedOrchard~period)+
+  geom_sf(data=sfSeedZones4.5 %>% filter(!is.na(period) & !is.na(seed.orchard)), aes(fill=likelihood120), colour=0)+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
   theme_bw()+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())+
   labs(fill = "Likelihood production index > 120%")
 dev.off()
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5_spatial.png"), width = 800, height = 1000)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones4.5 %>% filter(!is.na(period) & !is.na(seed.orchard)), aes(fill=likelihood110), colour=0)+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "Likelihood production index > 110%")
+dev.off()
+
+
+# RCP8.5
+df8.5 <- dfMaster %>%
+  #filter(period != "1961-1990") %>% 
+  filter(RCP != "4.5") %>% 
+  #filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
+  group_by(seed.zone,period,seed.orchard) %>% 
+  summarise(n_GCMs = n(),
+            above120 = sum(mean >= 120),
+            above110 = sum(mean >= 110),
+            above100 = sum(mean >= 100),
+            less100 = sum(mean < 100))
+
+# make sure all seed zones & seed orchards present
+df8.5 <- left_join(dfSZSO,df8.5,by=c("seed.zone"), all.x=TRUE)
+df8.5$seed.orchard.x <- NULL
+colnames(df8.5)[3] <- "seed.orchard"
+df8.5$seed.zone <- factor(df8.5$seed.zone, ordered=T, levels = zoneOrder)
+df8.5$seed.orchard <- factor(df8.5$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+
+# plot agreement above 120% prodidx
+df8.5$likelihood120 <- NA
+df8.5$likelihood120[which(df8.5$above120>=5)] <- "Very likely"
+df8.5$likelihood120[which(df8.5$above120==4)] <- "More likely than not"
+df8.5$likelihood120[which(df8.5$above120==3)] <- "More likely than not"
+df8.5$likelihood120[which(df8.5$above120==2)] <- "Possible"
+df8.5$likelihood120[which(df8.5$above120==1)] <- "Possible"
+df8.5$likelihood120[which(df8.5$above120==0)] <- "Unlikely"
+
+
+df8.5$likelihood120 <- factor(df8.5$likelihood120, ordered = T,
+                              levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5.png"), width = 600, height = 800)
+df8.5 %>% filter(!is.na(df8.5$period)) %>%
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=likelihood120))+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1, labels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"), drop=FALSE)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  coord_flip()+
+  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
+  theme_bw()+
+  ylab("Time period")+xlab("Seed orchard")+
+  labs(fill="Likelihood")
+dev.off()
+
+
+# plot agreement above 110% prodidx
+df8.5$likelihood110 <- NA
+df8.5$likelihood110[which(df8.5$above110>=5)] <- "Very likely"
+df8.5$likelihood110[which(df8.5$above110==4)] <- "More likely than not"
+df8.5$likelihood110[which(df8.5$above110==3)] <- "More likely than not"
+df8.5$likelihood110[which(df8.5$above110==2)] <- "Possible"
+df8.5$likelihood110[which(df8.5$above110==1)] <- "Possible"
+df8.5$likelihood110[which(df8.5$above110==0)] <- "Unlikely"
+
+df8.5$likelihood110 <- factor(df8.5$likelihood110, ordered = T,
+                              levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5.png"), width = 600, height = 800)
+df8.5 %>%  filter(!is.na(df8.5$period)) %>% 
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=likelihood110))+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  coord_flip()+
+  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
+  theme_bw()+
+  ylab("Time period")+xlab("Seed orchard")+
+  labs(fill="Likelihood")
+dev.off()
+
+# could join back & plot spatially
+df8.5$seed.zone <- factor(df8.5$seed.zone,ordered = T, levels=zoneOrder)
+sfSeedZones8.5 <- left_join(sfSeedZones,df8.5,by="seed.zone")
+
+# load country outline
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+sweden <- worldmap[worldmap$name == 'Sweden',]
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5_spatial.png"), width = 800, height = 1000)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones8.5 %>% filter(!is.na(period) & !is.na(seed.orchard)), aes(fill=likelihood120), colour=0)+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "Likelihood production index > 120%")
+dev.off()
+
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5_spatial.png"), width = 800, height = 100)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data=sfSeedZones8.5 %>% filter(!is.na(period) & !is.na(seed.orchard)), aes(fill=likelihood110), colour=0)+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "Likelihood production index > 110%")
+dev.off()
+
+# combined version
+df8.5$uncertainty <- NA
+df8.5$uncertainty[which(df8.5$less100>=5)] <- "Below local (very likely)"
+df8.5$uncertainty[which(df8.5$less100==4)] <- "Below local (more likely than not)"
+df8.5$uncertainty[which(df8.5$less100==3)] <- "Below local (more likely than not)"
+df8.5$uncertainty[which(df8.5$less100==2)] <- "Below local (possible)"
+df8.5$uncertainty[which(df8.5$less100==1)] <- "Below local (possible)"
+df8.5$uncertainty[which(df8.5$less100==0)] <- "Below local (possible)"
+
+df8.5$uncertainty[which(df8.5$above100>=5 & df8.5$less100<3)] <- "Above local (very likely)"
+df8.5$uncertainty[which(df8.5$above100==4 & df8.5$less100<3)] <- "Above local (more likely than not)"
+df8.5$uncertainty[which(df8.5$above100==3 & df8.5$less100<3)] <- "Above local (more likely than not)"
+df8.5$uncertainty[which(df8.5$above100==2 & df8.5$less100<3)] <- "Above local (possible)"
+df8.5$uncertainty[which(df8.5$above100==1 & df8.5$less100<3)] <- "Above local (possible)"
+df8.5$uncertainty[which(df8.5$above100==0 & df8.5$less100<3)] <- "Above local (possible)"
+
+df8.5$uncertainty[which(df8.5$above110>=5)] <- "Above 110% (very likely)"
+df8.5$uncertainty[which(df8.5$above110==4)] <- "Above 110% (more likely than not)"
+df8.5$uncertainty[which(df8.5$above110==3)] <- "Above 110% (more likely than not)"
+#df8.5$uncertainty[which(df8.5$above110==2)] <- "Above 110% (possible)"
+#df8.5$uncertainty[which(df8.5$above110==1)] <- "Above 110% (possible)"
+#df8.5$uncertainty[which(df8.5$above110==0)] <- "Above 110% (possible)"
+
+df8.5$uncertainty[which(df8.5$above120>=5)] <- "Above 120% (very likely)"
+df8.5$uncertainty[which(df8.5$above120==4)] <- "Above 120% (more likely than not)"
+df8.5$uncertainty[which(df8.5$above120==3)] <- "Above 120% (more likely than not)"
+#df8.5$uncertainty[which(df8.5$above120==2)] <- "Above 120% (possible)"
+#df8.5$uncertainty[which(df8.5$above120==1)] <- "Above 120% (possible)"
+#df8.5$uncertainty[which(df8.5$above120==0)] <- "Above 120% (possible)"
+
+df8.5$uncertainty[which(is.na(df8.5$uncertainty))] <- "Beyond model thresholds"
+
+df8.5$uncertainty <- factor(df8.5$uncertainty, ordered = T,
+                              levels = c("Above 120% (very likely)",
+                                         "Above 120% (more likely than not)",
+                                         "Above 110% (very likely)",
+                                         "Above 110% (more likely than not)",
+                                         "Above local (very likely)",
+                                         "Above local (possible)",
+                                         "Below local (possible)",
+                                         "Below local (more likely than not)",
+                                         "Below local (very likely)",
+                                         "Beyond model thresholds"))
+
+df8.5 %>%  filter(!is.na(df8.5$period)) %>% 
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=uncertainty))+
+  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  scale_fill_viridis(discrete=T, direction = -1)+
+  coord_flip()+
+  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
+  theme_bw()+
+  ylab("Time period")+xlab("Seed orchard")+
+  labs(fill="Likelihood")
+
+
+
+
+
 
 ### old figs -------------------------------------------------------------------
 
