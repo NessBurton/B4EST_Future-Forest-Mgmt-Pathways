@@ -243,10 +243,10 @@ for (f in files){
   
 }
 
-#df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
+df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
 head(df_results_summary)
 summary(df_results_summary)
-colnames(df_results_summary) <- c("seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
+colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
 
 # all combinations seed orchards & seed zones
 orchards <- c("PrProdidxSOh60",

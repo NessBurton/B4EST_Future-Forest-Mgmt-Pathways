@@ -217,14 +217,23 @@ for (rcp in lstRCP){
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
   
-  rcp.name <- ifelse(grepl("26in70", rcp), 'RCP2.6', 
+  rcp.name <- ifelse(grepl("45in50", rcp), 'RCP4.5', 
                      ifelse(grepl("45in70", rcp), 'RCP4.5',
-                            ifelse(grepl("60in70", rcp), 'RCP6.0',
+                            ifelse(grepl("85in50", rcp), 'RCP8.5',
                                    ifelse(grepl("85in70", rcp), 'RCP8.5', NA))))
   
   for (SO in lstSO){
     
     #SO <- lstSO[1]
+    
+    SO.name <- ifelse(grepl("SOh60", SO), 'SO 1.5g 60°N', 
+                      ifelse(grepl("SOhs60", SO), 'SO 1.5gS 60°N',
+                             ifelse(grepl("SOh62", SO), 'SO 1.5g 62°N',
+                                    ifelse(grepl("SOhs62", SO), 'SO 1.5gS 62°N',
+                                           ifelse(grepl("SOh64", SO), 'SO 1.5g 64°N',
+                                                  ifelse(grepl("SOhs64", SO), 'SO 1.5gS 64°N',
+                                                         ifelse(grepl("SOh66", SO), 'SO 1.5g 66°N',
+                                                                ifelse(grepl("SOhs66", SO), 'SO 1.5gS 66°N', NA))))))))
     
     # filter to seed orchard
     rstsProv1 <- grep(SO, rstsRCP1, value=TRUE)
@@ -242,8 +251,8 @@ for (rcp in lstRCP){
     sumStack2 <- sum(rclassStack2[[1]],rclassStack2[[2]],rclassStack2[[3]],rclassStack2[[4]],rclassStack2[[5]])
     print("Raster stacks summed")
     
-    spplot(sumStack1) # agreement
-    spplot(sumStack2) # thresholds
+    #spplot(sumStack1) # agreement
+    #spplot(sumStack2) # thresholds
     
     # Convert raster to dataframe
     df1 <- as.data.frame(sumStack1, xy=T)
@@ -268,7 +277,7 @@ for (rcp in lstRCP){
                              #labels = c("Possible", "Likely", "Very likely"),
                              #low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
-        ggtitle(paste0(SO," | ",rcp.name))+
+        ggtitle(paste0(SO.name," | ",rcp.name))+
         theme(plot.title = element_text(face="bold",size=22),
               axis.title = element_blank(),
               axis.text = element_blank(),
@@ -297,7 +306,7 @@ legend <- get_legend(p2)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend2.png"),width=4, height=6, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend2.png"),width=5, height=7, dpi=300)
 
 
 ### arrange in single figure per seed orchard ----------------------------------
@@ -330,6 +339,7 @@ library(gridExtra)
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
 lstPlots <- grep("PrProdidx", lstPlots, value=TRUE)
+lstPlots <- grep("70", lstPlots, value=TRUE) # change yr here
 lstPlots1 <- grep("SOh6", lstPlots, value=TRUE)
 lstPlots2 <- grep("SOhs6", lstPlots, value=TRUE)
 
@@ -342,7 +352,7 @@ gl <- lapply(rl, grid::rasterGrob)
                                ncol=3,
                                layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
 
-ggsave(c1, file=paste0(dirFigs,"SO_height_gain_Combined_2070.png"),width=16, height=16, dpi=300)
+ggsave(c1, file=paste0(dirFigs,"SO_height_gain_Combined_2070.png"),width=24, height=28, dpi=300)
 
 rl2 <- lapply(lstPlots2, png::readPNG)
 gl2 <- lapply(rl2, grid::rasterGrob)
@@ -350,7 +360,7 @@ gl2 <- lapply(rl2, grid::rasterGrob)
                                ncol=3,
                                layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
 
-ggsave(c2, file=paste0(dirFigs,"SO_height&survival_gain_Combined_2070.png"),width=16, height=16, dpi=300)
+ggsave(c2, file=paste0(dirFigs,"SO_height&survival_gain_Combined_2070.png"),width=24, height=28, dpi=300)
 
 
 ### OLD ------------------------------------------------------------------------
