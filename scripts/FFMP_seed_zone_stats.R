@@ -527,65 +527,117 @@ ggplot()+
 dev.off()
 
 
-### combined version -----------------------------------------------------------
+### combined FFMP version ------------------------------------------------------
 
-df8.5$uncertainty <- NA
-df8.5$uncertainty[which(df8.5$less100>=5)] <- "Below local (very likely)"
-df8.5$uncertainty[which(df8.5$less100==4)] <- "Below local (more likely than not)"
-df8.5$uncertainty[which(df8.5$less100==3)] <- "Below local (more likely than not)"
-df8.5$uncertainty[which(df8.5$less100==2)] <- "Below local (possible)"
-df8.5$uncertainty[which(df8.5$less100==1)] <- "Below local (possible)"
-df8.5$uncertainty[which(df8.5$less100==0)] <- "Below local (possible)"
+dfFFMP <- dfMaster %>%
+  group_by(RCP,period,seed.zone,seed.orchard) %>% 
+  summarise(n_GCMs = n(),
+            above120 = sum(mean >= 120),
+            above110 = sum(mean >= 110),
+            above100 = sum(mean >= 100),
+            less100 = sum(mean < 100))
 
-df8.5$uncertainty[which(df8.5$above100>=5 & df8.5$less100<3)] <- "Above local (very likely)"
-df8.5$uncertainty[which(df8.5$above100==4 & df8.5$less100<3)] <- "Above local (more likely than not)"
-df8.5$uncertainty[which(df8.5$above100==3 & df8.5$less100<3)] <- "Above local (more likely than not)"
-df8.5$uncertainty[which(df8.5$above100==2 & df8.5$less100<3)] <- "Above local (possible)"
-df8.5$uncertainty[which(df8.5$above100==1 & df8.5$less100<3)] <- "Above local (possible)"
-df8.5$uncertainty[which(df8.5$above100==0 & df8.5$less100<3)] <- "Above local (possible)"
+dfFFMP$pathway <- NA
+dfFFMP$pathway[which(dfFFMP$less100>=5)] <- "Expiry (below local)"
+dfFFMP$pathway[which(dfFFMP$less100==4)] <- "Expiry (below local)"
+dfFFMP$pathway[which(dfFFMP$less100==3)] <- "Expiry (below local)"
+dfFFMP$pathway[which(dfFFMP$less100==2)] <- "Poor performance (below local)"
+dfFFMP$pathway[which(dfFFMP$less100==1)] <- "Poor performance (below local)"
+dfFFMP$pathway[which(dfFFMP$less100==0)] <- "Poor performance (below local)"
 
-df8.5$uncertainty[which(df8.5$above110>=5)] <- "Above 110% (very likely)"
-df8.5$uncertainty[which(df8.5$above110==4)] <- "Above 110% (more likely than not)"
-df8.5$uncertainty[which(df8.5$above110==3)] <- "Above 110% (more likely than not)"
-#df8.5$uncertainty[which(df8.5$above110==2)] <- "Above 110% (possible)"
-#df8.5$uncertainty[which(df8.5$above110==1)] <- "Above 110% (possible)"
-#df8.5$uncertainty[which(df8.5$above110==0)] <- "Above 110% (possible)"
+dfFFMP$pathway[which(dfFFMP$above100>=5 & dfFFMP$less100<3)] <- "Good performance (above local)"
+dfFFMP$pathway[which(dfFFMP$above100==4 & dfFFMP$less100<3)] <- "Good performance (above local)"
+dfFFMP$pathway[which(dfFFMP$above100==3 & dfFFMP$less100<3)] <- "Good performance (above local)"
+dfFFMP$pathway[which(dfFFMP$above100==2 & dfFFMP$less100<3)] <- "Moderate performance (above local)"
+dfFFMP$pathway[which(dfFFMP$above100==1 & dfFFMP$less100<3)] <- "Moderate performance (above local)"
+dfFFMP$pathway[which(dfFFMP$above100==0 & dfFFMP$less100<3)] <- "Moderate performance (above local)"
 
-df8.5$uncertainty[which(df8.5$above120>=5)] <- "Above 120% (very likely)"
-df8.5$uncertainty[which(df8.5$above120==4)] <- "Above 120% (more likely than not)"
-df8.5$uncertainty[which(df8.5$above120==3)] <- "Above 120% (more likely than not)"
-#df8.5$uncertainty[which(df8.5$above120==2)] <- "Above 120% (possible)"
-#df8.5$uncertainty[which(df8.5$above120==1)] <- "Above 120% (possible)"
-#df8.5$uncertainty[which(df8.5$above120==0)] <- "Above 120% (possible)"
+dfFFMP$pathway[which(dfFFMP$above110>=5)] <- "Very good performance (above 110)"
+dfFFMP$pathway[which(dfFFMP$above110==4)] <- "Very good performance (above 110)"
+dfFFMP$pathway[which(dfFFMP$above110==3)] <- "Very good performance (above 110)"
+#dfFFMP$pathway[which(dfFFMP$above110==2)] <- "Above 110% (possible)"
+#dfFFMP$pathway[which(dfFFMP$above110==1)] <- "Above 110% (possible)"
+#dfFFMP$pathway[which(dfFFMP$above110==0)] <- "Above 110% (possible)"
 
-df8.5$uncertainty[which(is.na(df8.5$uncertainty))] <- "Beyond model thresholds"
+dfFFMP$pathway[which(dfFFMP$above120>=5)] <- "Excellent performance (above 120)"
+dfFFMP$pathway[which(dfFFMP$above120==4)] <- "Excellent performance (above 120)"
+dfFFMP$pathway[which(dfFFMP$above120==3)] <- "Excellent performance (above 120)"
+#dfFFMP$pathway[which(dfFFMP$above120==2)] <- "Above 120% (possible)"
+#dfFFMP$pathway[which(dfFFMP$above120==1)] <- "Above 120% (possible)"
+#dfFFMP$pathway[which(dfFFMP$above120==0)] <- "Above 120% (possible)"
 
-df8.5$uncertainty <- factor(df8.5$uncertainty, ordered = T,
-                              levels = c("Above 120% (very likely)",
-                                         "Above 120% (more likely than not)",
-                                         "Above 110% (very likely)",
-                                         "Above 110% (more likely than not)",
-                                         "Above local (very likely)",
-                                         "Above local (possible)",
-                                         "Below local (possible)",
-                                         "Below local (more likely than not)",
-                                         "Below local (very likely)",
+dfFFMP$pathway[which(is.na(dfFFMP$pathway))] <- "Beyond model thresholds"
+
+dfFFMP$pathway <- factor(dfFFMP$pathway, ordered = T,
+                              levels = c("Excellent performance (above 120)",
+                                         "Very good performance (above 110)",
+                                         "Good performance (above local)",
+                                         "Moderate performance (above local)",
+                                         "Poor performance (below local)",
+                                         "Expiry (below local)",
                                          "Beyond model thresholds"))
 
-df8.5 %>%  filter(!is.na(df8.5$period)) %>% 
+png(paste0(wd,"/figures/SO_FFMP_RCP4.5.png"), width = 600, height = 850)
+dfFFMP %>% 
+  filter(RCP == "4.5" | RCP == "Baseline") %>% 
   ggplot()+
-  geom_tile(aes(seed.orchard,period, fill=uncertainty))+
-  #scale_fill_brewer(palette = "RdYlGn", direction = -1)+
-  scale_fill_viridis(discrete=T, direction = -1)+
+  geom_tile(aes(seed.orchard,period, fill=pathway))+
+  #scale_fill_viridis(discrete=T, direction = -1)+
+  scale_fill_brewer(palette = "RdYlGn", direction=-1)+
   coord_flip()+
-  facet_wrap(~seed.zone, nrow = 11, ncol=2)+
+  facet_wrap(~seed.zone, ncol = 2)+
   theme_bw()+
   ylab("Time period")+xlab("Seed orchard")+
-  labs(fill="Likelihood")
+  labs(fill="Seed orchard production index")
+dev.off()
 
+png(paste0(wd,"/figures/SO_FFMP_RCP8.5.png"), width = 600, height = 850)
+dfFFMP %>% 
+  filter(RCP == "8.5" | RCP == "Baseline") %>% 
+  ggplot()+
+  geom_tile(aes(seed.orchard,period, fill=pathway))+
+  #scale_fill_viridis(discrete=T, direction = -1)+
+  scale_fill_brewer(palette = "RdYlGn", direction=-1)+
+  coord_flip()+
+  facet_wrap(~seed.zone, ncol = 2)+
+  theme_bw()+
+  ylab("Time period")+xlab("Seed orchard")+
+  labs(fill="Seed orchard production index")
+dev.off()
 
+# could join back & plot spatially
+sfFFMPs <- left_join(sfSeedZones,dfFFMP,by="seed.zone")
 
+# load country outline
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+sweden <- worldmap[worldmap$name == 'Sweden',]
 
+png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 800, height = 1000)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data = sfFFMPs %>% filter(RCP == "4.5" | RCP == "Baseline"), aes(fill=pathway), colour=0)+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  #scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "Seed orchard production index")
+dev.off()
+
+png(paste0(wd,"/figures/SO_FFMP_RCP8.5_spatial.png"), width = 800, height = 1000)
+ggplot()+
+  geom_sf(data = sweden, fill=NA)+
+  geom_sf(data = sfFFMPs %>% filter(RCP == "8.5" | RCP == "Baseline"), aes(fill=pathway), colour=0)+
+  scale_fill_brewer(palette = "RdYlGn", direction = -1)+
+  #scale_fill_viridis(discrete=T, direction = -1)+
+  facet_grid(seed.orchard~period)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(fill = "Seed orchard production index")
+dev.off()
 
 
 ### old figs -------------------------------------------------------------------
