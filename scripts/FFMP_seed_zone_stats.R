@@ -243,6 +243,9 @@ for (f in files){
   
 }
 
+
+### read in summaries ----------------------------------------------------------
+
 df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
 head(df_results_summary)
 summary(df_results_summary)
@@ -274,12 +277,26 @@ dfMaster$RCP <- ifelse(grepl("45", dfMaster$scenario), '4.5',
                        ifelse(grepl("85", dfMaster$scenario), '8.5', 'Baseline'))
 dfMaster$period <- ifelse(grepl("50", dfMaster$scenario), "2041-2060",
                           ifelse(grepl("70", dfMaster$scenario), '2061-2080', '1971-2017'))
-dfMaster$seed.orchard <- substr(dfMaster$seed.orchard, 10,15)
+dfMaster$seed.orchard <- ifelse(grepl("SOh60", dfMaster$seed.orchard), 'SO 1.5g 60°N', 
+                                           ifelse(grepl("SOhs60", dfMaster$seed.orchard), 'SO 1.5gS 60°N',
+                                                  ifelse(grepl("SOh62", dfMaster$seed.orchard), 'SO 1.5g 62°N',
+                                                         ifelse(grepl("SOhs62", dfMaster$seed.orchard), 'SO 1.5gS 62°N',
+                                                                ifelse(grepl("SOh64", dfMaster$seed.orchard), 'SO 1.5g 64°N',
+                                                                       ifelse(grepl("SOhs64", dfMaster$seed.orchard), 'SO 1.5gS 64°N',
+                                                                              ifelse(grepl("SOh66", dfMaster$seed.orchard), 'SO 1.5g 66°N',
+                                                                                     ifelse(grepl("SOhs66", dfMaster$seed.orchard), 'SO 1.5gS 66°N', NA))))))))
 
 dfMaster$GCM <- factor(dfMaster$GCM)
 dfMaster$RCP <- factor(dfMaster$RCP)
 dfMaster$seed.zone <- factor(dfMaster$seed.zone, ordered=T, levels = zoneOrder)
-dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+                                                                               'SO 1.5gS 60°N',
+                                                                               'SO 1.5g 62°N',
+                                                                               'SO 1.5gS 62°N',
+                                                                               'SO 1.5g 64°N',
+                                                                               'SO 1.5gS 64°N',
+                                                                               'SO 1.5g 66°N',
+                                                                               'SO 1.5gS 66°N'))
 
 
 # RCP4.5
@@ -299,7 +316,14 @@ df4.5 <- left_join(dfSZSO,df4.5,by=c("seed.zone"), all.x=TRUE)
 df4.5$seed.orchard.x <- NULL
 colnames(df4.5)[3] <- "seed.orchard"
 df4.5$seed.zone <- factor(df4.5$seed.zone, ordered=T, levels = zoneOrder)
-df4.5$seed.orchard <- factor(df4.5$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+df4.5$seed.orchard <- factor(df4.5$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+                                                                         'SO 1.5gS 60°N',
+                                                                         'SO 1.5g 62°N',
+                                                                         'SO 1.5gS 62°N',
+                                                                         'SO 1.5g 64°N',
+                                                                         'SO 1.5gS 64°N',
+                                                                         'SO 1.5g 66°N',
+                                                                         'SO 1.5gS 66°N'))
 
 # plot agreement above 120% prodidx
 df4.5$likelihood120 <- NA
@@ -314,7 +338,7 @@ df4.5$likelihood120[which(df4.5$above120==0)] <- "Unlikely"
 df4.5$likelihood120 <- factor(df4.5$likelihood120, ordered = T,
                              levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 800)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP4.5.png"), width = 600, height = 850)
 df4.5 %>% filter(!is.na(df4.5$period)) %>%
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=likelihood120))+
@@ -340,7 +364,7 @@ df4.5$likelihood110[which(df4.5$above110==0)] <- "Unlikely"
 df4.5$likelihood110 <- factor(df4.5$likelihood110, ordered = T,
                              levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5.png"), width = 600, height = 800)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP4.5.png"), width = 600, height = 850)
 df4.5 %>%  filter(!is.na(df4.5$period)) %>% 
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=likelihood110))+
@@ -406,7 +430,14 @@ df8.5 <- left_join(dfSZSO,df8.5,by=c("seed.zone"), all.x=TRUE)
 df8.5$seed.orchard.x <- NULL
 colnames(df8.5)[3] <- "seed.orchard"
 df8.5$seed.zone <- factor(df8.5$seed.zone, ordered=T, levels = zoneOrder)
-df8.5$seed.orchard <- factor(df8.5$seed.orchard, ordered = T, levels = c("SOh60","SOhs60","SOh62","SOhs62","SOh64","SOhs64","SOh66","SOhs66"))
+df8.5$seed.orchard <- factor(df8.5$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+                                                                         'SO 1.5gS 60°N',
+                                                                         'SO 1.5g 62°N',
+                                                                         'SO 1.5gS 62°N',
+                                                                         'SO 1.5g 64°N',
+                                                                         'SO 1.5gS 64°N',
+                                                                         'SO 1.5g 66°N',
+                                                                         'SO 1.5gS 66°N'))
 
 # plot agreement above 120% prodidx
 df8.5$likelihood120 <- NA
@@ -421,7 +452,7 @@ df8.5$likelihood120[which(df8.5$above120==0)] <- "Unlikely"
 df8.5$likelihood120 <- factor(df8.5$likelihood120, ordered = T,
                               levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5.png"), width = 600, height = 800)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_120_RCP8.5.png"), width = 600, height = 850)
 df8.5 %>% filter(!is.na(df8.5$period)) %>%
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=likelihood120))+
@@ -447,7 +478,7 @@ df8.5$likelihood110[which(df8.5$above110==0)] <- "Unlikely"
 df8.5$likelihood110 <- factor(df8.5$likelihood110, ordered = T,
                               levels = c("Very likely","More likely than not","Possible","More unlikely than not","Unlikely"))
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5.png"), width = 600, height = 800)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5.png"), width = 600, height = 850)
 df8.5 %>%  filter(!is.na(df8.5$period)) %>% 
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=likelihood110))+
@@ -495,7 +526,9 @@ ggplot()+
   labs(fill = "Likelihood production index > 110%")
 dev.off()
 
-# combined version
+
+### combined version -----------------------------------------------------------
+
 df8.5$uncertainty <- NA
 df8.5$uncertainty[which(df8.5$less100>=5)] <- "Below local (very likely)"
 df8.5$uncertainty[which(df8.5$less100==4)] <- "Below local (more likely than not)"
