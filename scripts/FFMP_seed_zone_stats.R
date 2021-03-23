@@ -482,7 +482,7 @@ ggplot()+
   labs(fill = "Likelihood production index > 120%")
 dev.off()
 
-png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5_spatial.png"), width = 800, height = 100)
+png(paste0(wd,"/figures/SO_mean_prodIdx_above_110_RCP8.5_spatial.png"), width = 800, height = 1000)
 ggplot()+
   geom_sf(data = sweden, fill=NA)+
   geom_sf(data=sfSeedZones8.5 %>% filter(!is.na(period) & !is.na(seed.orchard)), aes(fill=likelihood110), colour=0)+
