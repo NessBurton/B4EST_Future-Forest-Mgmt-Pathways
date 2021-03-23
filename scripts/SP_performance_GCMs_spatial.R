@@ -21,7 +21,7 @@ library(rnaturalearth)
 library(vroom)
 library(scales)
 library(ggpattern)
-
+library(ggnewscale)
 
 ### rasterise ------------------------------------------------------------------
 
@@ -189,6 +189,171 @@ for (f in files){
   
   
 }
+
+### Spatial agreement between GCMs, per RCP ------------------------------------
+
+# list all tifs 
+rsts <-  list.files(paste0(dirOut, "D4.4_prodidx_rsts/"),pattern = "*.tif", full.names = T)
+# not mean
+rsts <- grep("bc|mg|mi|no|he", rsts, value=TRUE)
+
+# list reclassed rasters (agreement above or below mean)
+rstsAg <- grep("GCMagreement", rsts, value=TRUE)
+# list reclassed rasters (beyond model thresholds)
+rstsTh <- grep("modelThresholds", rsts, value=TRUE)
+
+lstRCP <- c("45in50","45in70","85in50","85in70")
+
+lstSO <- c("PrProdidxSOh60","PrProdidxSOhs60","PrProdidxSOh62","PrProdidxSOhs62",
+           "PrProdidxSOh64","PrProdidxSOhs64","PrProdidxSOh66","PrProdidxSOhs66")
+
+#viridis(11); plasma(11)
+#display.brewer.pal(8, "Greys"); brewer.pal(8, "Greys")
+
+for (rcp in lstRCP){
+  
+  #rcp <- lstRCP[1]
+  
+  rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
+  rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
+  
+  rcp.name <- ifelse(grepl("26in70", rcp), 'RCP2.6', 
+                     ifelse(grepl("45in70", rcp), 'RCP4.5',
+                            ifelse(grepl("60in70", rcp), 'RCP6.0',
+                                   ifelse(grepl("85in70", rcp), 'RCP8.5', NA))))
+  
+  for (SO in lstSO){
+    
+    #SO <- lstSO[1]
+    
+    # filter to seed orchard
+    rstsProv1 <- grep(SO, rstsRCP1, value=TRUE)
+    # need to add ifelse for mean/min/max
+    rstsProv2 <- grep(SO, rstsRCP2, value=TRUE)
+    
+    # raster stack
+    rclassStack1 <- stack(rstsProv1) # agreement
+    rclassStack2 <- stack(rstsProv2) # thresholds
+    
+    print("Provenance results per RCP/GCM read in as stack")
+    
+    # sum
+    sumStack1 <- sum(rclassStack1[[1]],rclassStack1[[2]],rclassStack1[[3]],rclassStack1[[4]],rclassStack1[[5]])
+    sumStack2 <- sum(rclassStack2[[1]],rclassStack2[[2]],rclassStack2[[3]],rclassStack2[[4]],rclassStack2[[5]])
+    print("Raster stacks summed")
+    
+    spplot(sumStack1) # agreement
+    spplot(sumStack2) # thresholds
+    
+    # Convert raster to dataframe
+    df1 <- as.data.frame(sumStack1, xy=T)
+    names(df1) <- c("x", "y", "GCMagree")
+    df2 <- as.data.frame(sumStack2, xy=T)
+    names(df2) <- c("x", "y", "Threshold")
+    df2$binary <- NA
+    df2$binary[which(df2$Threshold>=3)]<-"on"
+    df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
+    
+    (p2 <- ggplot(data = df1) + 
+        geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
+        #scale_fill_gradientn(colours = cols1)+
+        scale_fill_gradient2("Above 120%", limits = c(-5, 5), n.breaks = 3,
+                             labels = c("Very unlikely","Possible","Very likely"),
+                             low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
+        #labs(fill="GCM agreement")+
+        new_scale("fill") +
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
+        scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
+        #scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
+                             #labels = c("Possible", "Likely", "Very likely"),
+                             #low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
+        theme_bw()+
+        ggtitle(paste0(SO," | ",rcp.name))+
+        theme(plot.title = element_text(face="bold",size=22),
+              axis.title = element_blank(),
+              axis.text = element_blank(),
+              axis.ticks = element_blank(),
+              #legend.title = element_text(size = 18, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 16)))
+              legend.position = "none"))
+    
+    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",SO,"_RCP",rcp,".png"), width=8, height=10, dpi=300)
+    
+    print(paste0("Plot saved for seed orchard: ",SO))
+    
+  }
+  
+  print(paste0("Plots complete for RCP: ", rcp))
+  
+}
+
+# get legend
+# in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
+library(ggpubr)
+
+# Extract the legend. Returns a gtable
+legend <- get_legend(p2)
+
+# Convert to a ggplot and save
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend2.png"),width=4, height=6, dpi=300)
+
+
+### arrange in single figure per seed orchard ----------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+#for (SO in lstSO){
+  
+  #SO <- lstSO[1]
+  #lstPlots <- list.files(paste0(dirFigs), full.names = T)
+  #lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
+  #lstPlots <- grep(SO, lstPlots, value=TRUE)
+  #lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/GCM_agreement_legend2.png")
+  
+  #lstPlots <- lstPlots[c()]
+  #lstPlots <- lstPlots[c()] # specific order for plotting
+  
+  #rl <- lapply(lstPlots, png::readPNG)
+  #gl <- lapply(rl, grid::rasterGrob)
+  #(c1 <- gridExtra::grid.arrange(grobs=gl, 
+                                 #ncol=3,
+                                 #layout_matrix = cbind(c(1), c(2), c(3))))
+  
+  #ggsave(c1, file=paste0(dirFigs,SO,"_Combined.png"),width=14, height=8, dpi=300)
+  
+#}
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
+lstPlots <- grep("PrProdidx", lstPlots, value=TRUE)
+lstPlots1 <- grep("SOh6", lstPlots, value=TRUE)
+lstPlots2 <- grep("SOhs6", lstPlots, value=TRUE)
+
+lstPlots1 <- append(lstPlots1, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/GCM_agreement_legend2.png")
+lstPlots2 <- append(lstPlots2, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/GCM_agreement_legend2.png")
+
+rl <- lapply(lstPlots1, png::readPNG)
+gl <- lapply(rl, grid::rasterGrob)
+(c1 <- gridExtra::grid.arrange(grobs=gl, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
+
+ggsave(c1, file=paste0(dirFigs,"SO_height_gain_Combined.png"),width=14, height=16, dpi=300)
+
+rl2 <- lapply(lstPlots2, png::readPNG)
+gl2 <- lapply(rl2, grid::rasterGrob)
+(c2 <- gridExtra::grid.arrange(grobs=gl2, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
+
+ggsave(c2, file=paste0(dirFigs,"SO_height&survival_gain_Combined.png"),width=14, height=16, dpi=300)
+
+
+### OLD ------------------------------------------------------------------------
 
 # list production prediction tifs per scenario
 rsts <-  list.files(paste0(dirOut, "ProdIdx_rst/"),pattern = "*.tif",full.names = T)
