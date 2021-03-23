@@ -342,7 +342,7 @@ gl <- lapply(rl, grid::rasterGrob)
                                ncol=3,
                                layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
 
-ggsave(c1, file=paste0(dirFigs,"SO_height_gain_Combined.png"),width=14, height=16, dpi=300)
+ggsave(c1, file=paste0(dirFigs,"SO_height_gain_Combined_2070.png"),width=16, height=16, dpi=300)
 
 rl2 <- lapply(lstPlots2, png::readPNG)
 gl2 <- lapply(rl2, grid::rasterGrob)
@@ -350,7 +350,7 @@ gl2 <- lapply(rl2, grid::rasterGrob)
                                ncol=3,
                                layout_matrix = cbind(c(1,3,5,7), c(2,4,6,8), c(9,9,9,9))))
 
-ggsave(c2, file=paste0(dirFigs,"SO_height&survival_gain_Combined.png"),width=14, height=16, dpi=300)
+ggsave(c2, file=paste0(dirFigs,"SO_height&survival_gain_Combined_2070.png"),width=16, height=16, dpi=300)
 
 
 ### OLD ------------------------------------------------------------------------
