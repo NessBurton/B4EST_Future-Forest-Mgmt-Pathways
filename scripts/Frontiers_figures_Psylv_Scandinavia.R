@@ -592,13 +592,13 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("CoV_spatial", lstPlots, value=TRUE)
-lstPlots <- append(lstPlots, )
+lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/CoV_legend.png" )
 
 r3 <- lapply(lstPlots, png::readPNG)
 g3 <- lapply(r3, grid::rasterGrob)
 (c3 <- gridExtra::grid.arrange(grobs=g3, 
                                ncol=3,
-                               layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
+                               layout_matrix = cbind(c(1,3), c(2,4), c(5,5))))
 
 ggsave(c3, file=paste0(dirFigs,"CoV_per_RCP.png"),width=14, height=12, dpi=300)
 
