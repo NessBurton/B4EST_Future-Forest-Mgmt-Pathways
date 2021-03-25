@@ -338,7 +338,7 @@ lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
 for (rcp in lstRCP){
   
-  rcp <- lstRCP[1]
+  #rcp <- lstRCP[1]
   
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
@@ -350,7 +350,7 @@ for (rcp in lstRCP){
   
   for (prov in lstProv){
     
-    prov <- lstProv[1]
+    #prov <- lstProv[1]
     
     # filter to provenance
     rstsProv1 <- grep(prov, rstsRCP1, value=TRUE)
@@ -370,14 +370,17 @@ for (rcp in lstRCP){
     sumStack2 <- sum(rclassStack2[[1]],rclassStack2[[2]],rclassStack2[[3]],rclassStack2[[4]],rclassStack2[[5]])
     print("Raster stacks summed")
     
-    spplot(sumStack1) # agreement
-    spplot(sumStack2) # thresholds
+    #spplot(sumStack1) # agreement
+    #spplot(sumStack2) # thresholds
     
     # Convert raster to dataframe
     df1 <- as.data.frame(sumStack1, xy=T)
     names(df1) <- c("x", "y", "GCMagree")
     df2 <- as.data.frame(sumStack2, xy=T)
     names(df2) <- c("x", "y", "Threshold")
+    df2$binary <- NA
+    df2$binary[which(df2$Threshold>=3)]<-"on"
+    df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
     
     (p2 <- ggplot(data = df1) + 
         geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
@@ -387,13 +390,14 @@ for (rcp in lstRCP){
                              low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
         #labs(fill="GCM agreement")+
         new_scale("fill") +
-        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=Threshold), size = 1, alpha=0.5) +
-        scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
-                             labels = c("Possible", "Likely", "Very likely"),
-                             low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
+        scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
+        #scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
+        #labels = c("Possible", "Likely", "Very likely"),
+        #low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
         ggtitle(rcp.name)+
-        theme(plot.title = element_text(face="bold",size=20),
+        theme(plot.title = element_text(face="bold",size=22),
               axis.title = element_blank(),
               axis.text = element_blank(),
               axis.ticks = element_blank(),
@@ -468,5 +472,135 @@ gl3 <- lapply(rl3, grid::rasterGrob)
                                layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
 
 ggsave(c3, file=paste0(dirFigs,"PrHeightMaxLat_Combined.png"),width=14, height=12, dpi=300)
+
+
+
+
+### CoV spatial ----------------------------------------------------------------
+
+library(matrixStats) # for rowSds
+
+head(dfPredictions)
+names(dfPredictions)
+
+# calculate CoV across GCMs
+dfCoV_spatial <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","PrHeightMeanLat","GCM","RCP")) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+                          names_from = GCM, values_from = "PrHeightMeanLat") %>%
+  mutate(rMean = rowMeans(.[3:7], na.rm = TRUE),
+         rSD = rowSds(as.matrix(.[3:7]), na.rm = TRUE),
+         CoV = rSD/rMean*100)
+
+# re-join to lat-long using gridID
+dfCoords <- dfReference[,1:3] # or just add lat/long as id_cols in pivot_wider()?
+
+dfCoV_spatial <- merge(dfCoords,dfCoV_spatial,by = "GridID")
+
+# then plot CoV per RCP
+
+lstRCP <- c("2.6","6.0","4.5","8.5")
+
+for (rcp in lstRCP){
+  
+  #rcp <- lstRCP[1]
+  
+  rcp.name <- paste0("RCP",rcp)
+  rcp.grep <- str_replace_all(rcp, "[.]","")
+  
+  dfFilter <- dfCoV_spatial %>% 
+    filter(RCP == rcp)
+  
+  # convert to spatial
+  spP <- dfFilter
+  rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  # rasterise 
+  rst <- rasterize(spP, rstUTM, spP$CoV, fun=max, na.rm=TRUE) 
+  
+  # Convert raster to dataframe
+  dfCV <- as.data.frame(rst, xy=T)
+  colnames(dfCV) <- c("x","y","CoV")
+  
+  # read in correct threshold rasters
+  rstsRCP <- grep(rcp.grep, rstsTh, value=TRUE)
+  rstsRCP <- grep("MeanThresh", rstsRCP, value=TRUE)
+  rclassStack <- stack(rstsRCP) # thresholds
+  sumStack <- sum(rclassStack[[1]],rclassStack[[2]],rclassStack[[3]],rclassStack[[4]],rclassStack[[5]])
+  df2 <- as.data.frame(sumStack, xy=T)
+  names(df2) <- c("x", "y", "Threshold")
+  df2$binary <- NA
+  df2$binary[which(df2$Threshold>=3)]<-"on"
+  df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
+  
+  (p3 <- ggplot(data = dfCV) + 
+      geom_tile(data = dfCV %>% filter(!is.na(CoV)), mapping = aes(x = x, y = y, fill = CoV), size = 1) +
+      scale_fill_viridis(limits = c(0,100), 
+                         breaks = c(0,25,50,75,100), 
+                         labels = c(0,25,50,75,100),
+                         option = "plasma")+
+      #scale_fill_gradient2(limits = c(0, 100), n.breaks = 5,
+                           #labels = c(0,25,50,75,100),
+                           #low = "#F0F921FF", mid =  "#F0F921FF", high = "#0D0887FF")+
+      #labs(fill="Coefficient of Variation (%)")+
+      new_scale("fill") +
+      geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
+      scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
+      theme_bw()+
+      ggtitle(rcp.name)+
+      theme(plot.title = element_text(face="bold",size=22),
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank(),
+            #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+            #legend.text = element_text(size = 14)))
+            legend.position = "none"))
+  
+  ggsave(p3, file=paste0(dirFigs,"CoV_spatial_meanProv_RCP",rcp.grep,".png"), width=8, height=10, dpi=300)
+  
+  
+}
+
+# get legend
+# in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
+library(ggpubr)
+
+# Extract the legend. Returns a gtable
+legend <- get_legend(p3)
+
+# Convert to a ggplot and save
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"CoV_legend.png"),width=4, height=6, dpi=300)
+
+
+### arrange in single figure per provenance ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("CoV_spatial", lstPlots, value=TRUE)
+lstPlots <- append(lstPlots, )
+
+r3 <- lapply(lstPlots, png::readPNG)
+g3 <- lapply(r3, grid::rasterGrob)
+(c3 <- gridExtra::grid.arrange(grobs=g3, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
+
+ggsave(c3, file=paste0(dirFigs,"CoV_per_RCP.png"),width=14, height=12, dpi=300)
+
 
 
