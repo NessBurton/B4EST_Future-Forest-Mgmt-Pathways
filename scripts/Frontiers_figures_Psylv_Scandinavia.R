@@ -372,6 +372,9 @@ for (rcp in lstRCP){
     
     #spplot(sumStack1) # agreement
     #spplot(sumStack2) # thresholds
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    sumStack1 <- projectRaster(sumStack1, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    sumStack2 <- projectRaster(sumStack2, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
     
     # Convert raster to dataframe
     df1 <- as.data.frame(sumStack1, xy=T)
@@ -503,9 +506,15 @@ dfCoV_spatial <- merge(dfCoords,dfCoV_spatial,by = "GridID")
 
 lstRCP <- c("2.6","6.0","4.5","8.5")
 
+# load country outlines
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+nordic <- worldmap[worldmap$name %in% c('Norway','Sweden','Finland')==TRUE,]
+nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
 for (rcp in lstRCP){
   
-  rcp <- lstRCP[1]
+  #rcp <- lstRCP[1]
   
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
@@ -529,8 +538,11 @@ for (rcp in lstRCP){
   # rasterise 
   rst <- rasterize(spP, rstUTM, spP$CoV, fun=max, na.rm=TRUE) 
   
+  # reproject to lat long (so plotted in same projection as med region for figures)
+  rstRP <- projectRaster(rst, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+  
   # Convert raster to dataframe
-  dfCV <- as.data.frame(rst, xy=T)
+  dfCV <- as.data.frame(rstRP, xy=T)
   colnames(dfCV) <- c("x","y","CoV")
   
   # add discrete option for plotting
@@ -541,13 +553,18 @@ for (rcp in lstRCP){
   rstsRCP <- grep("MeanThresh", rstsRCP, value=TRUE)
   rclassStack <- stack(rstsRCP) # thresholds
   sumStack <- sum(rclassStack[[1]],rclassStack[[2]],rclassStack[[3]],rclassStack[[4]],rclassStack[[5]])
-  df2 <- as.data.frame(sumStack, xy=T)
+  
+  #reproj
+  sumStackRP <- projectRaster(sumStack, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+  
+  df2 <- as.data.frame(sumStackRP, xy=T)
   names(df2) <- c("x", "y", "Threshold")
   df2$binary <- NA
   df2$binary[which(df2$Threshold>=3)]<-"on"
   df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
   
-  (p3 <- ggplot(data = dfCV) + 
+  (p3 <- ggplot(data = dfCV) +
+      #geom_sf(data = nordic, fill=NA)+
       #geom_tile(data = dfCV %>% filter(!is.na(CoV)), mapping = aes(x = x, y = y, fill = CoV), size = 1) +
       #scale_fill_viridis(limits = c(0,100), 
                          #breaks = c(0,25,50,75,100), 
@@ -557,7 +574,7 @@ for (rcp in lstRCP){
       scale_fill_viridis(option = "plasma", 
                          discrete = T,
                          labels = c("0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"))+
-      labs(fill="Coefficient of Variation (%)")+
+      #labs(fill="Coefficient of Variation (%)")+
       new_scale("fill") +
       geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
       scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
@@ -568,9 +585,9 @@ for (rcp in lstRCP){
             #axis.title = element_blank(),
             #axis.text = element_blank(),
             #axis.ticks = element_blank(),
-            legend.title = element_text(size = 16, face = "bold", vjust = 3),
-            legend.text = element_text(size = 14)))
-            #legend.position = "none"))
+            #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+            #legend.text = element_text(size = 14)))
+            legend.position = "none"))
   
   ggsave(p3, file=paste0(dirFigs,"CoV_spatial_meanProv_RCP",rcp.grep,".png"), width=8, height=10, dpi=300)
   
