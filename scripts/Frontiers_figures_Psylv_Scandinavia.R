@@ -338,7 +338,7 @@ lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
 for (rcp in lstRCP){
   
-  rcp <- lstRCP[1]
+  #rcp <- lstRCP[1]
   
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
@@ -350,7 +350,7 @@ for (rcp in lstRCP){
   
   for (prov in lstProv){
     
-    prov <- lstProv[1]
+    #prov <- lstProv[1]
     
     # filter to provenance
     rstsProv1 <- grep(prov, rstsRCP1, value=TRUE)
