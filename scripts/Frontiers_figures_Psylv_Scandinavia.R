@@ -397,10 +397,11 @@ for (rcp in lstRCP){
         #low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
         ggtitle(rcp.name)+
+        xlab("Longitude")+ylab("Latitude")+
         theme(plot.title = element_text(face="bold",size=22),
-              axis.title = element_blank(),
-              axis.text = element_blank(),
-              axis.ticks = element_blank(),
+              #axis.title = element_blank(),
+              #axis.text = element_blank(),
+              #axis.ticks = element_blank(),
               #legend.title = element_text(size = 18, face = "bold", vjust = 3),
               #legend.text = element_text(size = 16)))
               legend.position = "none"))
@@ -437,7 +438,7 @@ library(gridExtra)
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
 lstPlots <- lstPlots[c(1,6,7,8,9)]
-lstPlots <- lstPlots[c(2,3,4,5,1)] # specific order for plotting
+lstPlots <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
 
 rl <- lapply(lstPlots, png::readPNG)
 gl <- lapply(rl, grid::rasterGrob)
@@ -504,7 +505,7 @@ lstRCP <- c("2.6","6.0","4.5","8.5")
 
 for (rcp in lstRCP){
   
-  #rcp <- lstRCP[1]
+  rcp <- lstRCP[1]
   
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
@@ -532,6 +533,9 @@ for (rcp in lstRCP){
   dfCV <- as.data.frame(rst, xy=T)
   colnames(dfCV) <- c("x","y","CoV")
   
+  # add discrete option for plotting
+  dfCV$CoV_discrete <- cut(dfCV$CoV, breaks = seq(from=0,to=100, length.out=11))
+  
   # read in correct threshold rasters
   rstsRCP <- grep(rcp.grep, rstsTh, value=TRUE)
   rstsRCP <- grep("MeanThresh", rstsRCP, value=TRUE)
@@ -544,27 +548,29 @@ for (rcp in lstRCP){
   df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
   
   (p3 <- ggplot(data = dfCV) + 
-      geom_tile(data = dfCV %>% filter(!is.na(CoV)), mapping = aes(x = x, y = y, fill = CoV), size = 1) +
-      scale_fill_viridis(limits = c(0,100), 
-                         breaks = c(0,25,50,75,100), 
-                         labels = c(0,25,50,75,100),
-                         option = "plasma")+
-      #scale_fill_gradient2(limits = c(0, 100), n.breaks = 5,
-                           #labels = c(0,25,50,75,100),
-                           #low = "#F0F921FF", mid =  "#F0F921FF", high = "#0D0887FF")+
-      #labs(fill="Coefficient of Variation (%)")+
+      #geom_tile(data = dfCV %>% filter(!is.na(CoV)), mapping = aes(x = x, y = y, fill = CoV), size = 1) +
+      #scale_fill_viridis(limits = c(0,100), 
+                         #breaks = c(0,25,50,75,100), 
+                         #labels = c(0,25,50,75,100),
+                         #option = "plasma")+
+      geom_tile(data = dfCV %>% filter(!is.na(CoV_discrete)), mapping = aes(x = x, y = y, fill = CoV_discrete), size = 1) +
+      scale_fill_viridis(option = "plasma", 
+                         discrete = T,
+                         labels = c("0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"))+
+      labs(fill="Coefficient of Variation (%)")+
       new_scale("fill") +
       geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
       scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
       theme_bw()+
       ggtitle(rcp.name)+
+      xlab("Longitude")+ylab("Latitude")+
       theme(plot.title = element_text(face="bold",size=22),
-            axis.title = element_blank(),
-            axis.text = element_blank(),
-            axis.ticks = element_blank(),
-            #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-            #legend.text = element_text(size = 14)))
-            legend.position = "none"))
+            #axis.title = element_blank(),
+            #axis.text = element_blank(),
+            #axis.ticks = element_blank(),
+            legend.title = element_text(size = 16, face = "bold", vjust = 3),
+            legend.text = element_text(size = 14)))
+            #legend.position = "none"))
   
   ggsave(p3, file=paste0(dirFigs,"CoV_spatial_meanProv_RCP",rcp.grep,".png"), width=8, height=10, dpi=300)
   
@@ -603,4 +609,19 @@ g3 <- lapply(r3, grid::rasterGrob)
 ggsave(c3, file=paste0(dirFigs,"CoV_per_RCP.png"),width=14, height=12, dpi=300)
 
 
+### elevation histogram --------------------------------------------------------
 
+dfReference %>% 
+  ggplot()+
+  geom_histogram(aes(x=GridAlt))+
+  theme_bw()+
+  ylab("Count")+xlab("Altitude (m)")
+
+names(dfReference)
+# take random sample before plotting otherwise carnage!!
+dfReference %>% sample_n(1000)
+  ggplot()+
+  geom_point(aes(x=GridAlt,y=PrHeightMeanLat))+
+  geom_smooth(aes(x=GridAlt,y=PrHeightMeanLat))+
+  theme_bw()+
+  ylab("Height (cm)")+xlab("Altitude (m)")
