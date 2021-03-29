@@ -148,6 +148,8 @@ files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv"
 #files <- grep("85in50", files, value=TRUE)
 #files <- grep("45in50", files, value=TRUE)
 files
+# remove ensemble mean and reference
+files <- files[-c(9:12,25)]
 
 #df_results_lng <- tibble()
 df_results_summary <- tibble()
@@ -155,25 +157,73 @@ scenario_list <- c()
 
 for (f in files){
   
-  f <- files[1]
+  #f <- files[1]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
+  GCM <- substr(scenario,1,6)
   
   scenario_list[[length(scenario_list) + 1]] <- scenario
   
   print("Read in data and apply thresholds")
   dfP <- vroom(f)
   
-  # apply thresholds (survival & latitudinal transfer)
-  dfP$PrProdidxSOh60[which(dfP$PrSurvSOh60 <0.5)] <- NA
-  dfP$PrProdidxSOh62[which(dfP$PrSurvSOh62 <0.5)] <- NA
-  dfP$PrProdidxSOh64[which(dfP$PrSurvSOh64 <0.5)] <- NA
-  dfP$PrProdidxSOh66[which(dfP$PrSurvSOh66 <0.5)] <- NA
-  dfP$PrProdidxSOhs60[which(dfP$PrSurvSOhs60 <0.5)] <- NA
-  dfP$PrProdidxSOhs62[which(dfP$PrSurvSOhs62 <0.5)] <- NA
-  dfP$PrProdidxSOhs64[which(dfP$PrSurvSOhs64 <0.5)] <- NA
-  dfP$PrProdidxSOhs66[which(dfP$PrSurvSOhs66 <0.5)] <- NA
+  # apply thresholds (survival, latitudinal transfer, and GDD5)
+  
+  # for survival, threshold for 2050 should use baseline period survival
+  if (grepl("50", scenario)==TRUE){
+    
+    print(paste0("Reading in reference climate file for survival thresholds"))
+    
+    # read in reference file
+    dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+    names(dfRef)
+    dfP$refSurvivalSOh60 <- dfRef$PrSurvSOh60
+    dfP$refSurvivalSOh62 <- dfRef$PrSurvSOh62
+    dfP$refSurvivalSOh64 <- dfRef$PrSurvSOh64
+    dfP$refSurvivalSOh66 <- dfRef$PrSurvSOh66
+    dfP$refSurvivalSOhs60 <- dfRef$PrSurvSOhs60
+    dfP$refSurvivalSOhs62 <- dfRef$PrSurvSOhs62
+    dfP$refSurvivalSOhs64 <- dfRef$PrSurvSOhs64
+    dfP$refSurvivalSOhs66 <- dfRef$PrSurvSOhs66
+    
+    dfP$PrProdidxSOh60[which(dfP$refSurvivalSOh60 <0.5)] <- NA
+    dfP$PrProdidxSOh62[which(dfP$refSurvivalSOh62 <0.5)] <- NA
+    dfP$PrProdidxSOh64[which(dfP$refSurvivalSOh64 <0.5)] <- NA
+    dfP$PrProdidxSOh66[which(dfP$refSurvivalSOh66 <0.5)] <- NA
+    dfP$PrProdidxSOhs60[which(dfP$refSurvivalSOhs60 <0.5)] <- NA
+    dfP$PrProdidxSOhs62[which(dfP$refSurvivalSOhs62 <0.5)] <- NA
+    dfP$PrProdidxSOhs64[which(dfP$refSurvivalSOhs64 <0.5)] <- NA
+    dfP$PrProdidxSOhs66[which(dfP$refSurvivalSOhs66 <0.5)] <- NA
+    
+    # thresholds for 2070 should use 2050 survival
+    }else{
+      
+      print(paste0("Reading in 2050 file for survival thresholds"))
+      
+      # read in 2050 file
+      df2050 <- vroom(paste0(dirData, "Productionpredictions/",GCM,"50_SO1.5g_predictions.csv"))
+      names(df2050)
+      dfP$t50SurvivalSOh60 <- df2050$PrSurvSOh60
+      dfP$t50SurvivalSOh62 <- df2050$PrSurvSOh62
+      dfP$t50SurvivalSOh64 <- df2050$PrSurvSOh64
+      dfP$t50SurvivalSOh66 <- df2050$PrSurvSOh66
+      dfP$t50SurvivalSOhs60 <- df2050$PrSurvSOhs60
+      dfP$t50SurvivalSOhs62 <- df2050$PrSurvSOhs62
+      dfP$t50SurvivalSOhs64 <- df2050$PrSurvSOhs64
+      dfP$t50SurvivalSOhs66 <- df2050$PrSurvSOhs66
+      
+      dfP$PrProdidxSOh60[which(dfP$t50SurvivalSOh60 <0.5)] <- NA
+      dfP$PrProdidxSOh62[which(dfP$t50SurvivalSOh62 <0.5)] <- NA
+      dfP$PrProdidxSOh64[which(dfP$t50SurvivalSOh64 <0.5)] <- NA
+      dfP$PrProdidxSOh66[which(dfP$t50SurvivalSOh66 <0.5)] <- NA
+      dfP$PrProdidxSOhs60[which(dfP$t50SurvivalSOhs60 <0.5)] <- NA
+      dfP$PrProdidxSOhs62[which(dfP$t50SurvivalSOhs62 <0.5)] <- NA
+      dfP$PrProdidxSOhs64[which(dfP$t50SurvivalSOhs64 <0.5)] <- NA
+      dfP$PrProdidxSOhs66[which(dfP$t50SurvivalSOhs66 <0.5)] <- NA
+      
+    }
+  
   
   dfP$PrProdidxSOh60[which(dfP$CenterLat > 65 | dfP$CenterLat < 55)] <- NA
   dfP$PrProdidxSOh62[which(dfP$CenterLat > 67 | dfP$CenterLat < 57)] <- NA
@@ -237,8 +287,8 @@ for (f in files){
   
   print(paste0("Processed scenario: ",scenario))
   
-  if (f == files[25]){
-    write.csv(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
+  if (f == files[20]){
+    write.csv(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh3.csv"))
   }
   
 }
@@ -246,10 +296,11 @@ for (f in files){
 
 ### read in summaries ----------------------------------------------------------
 
-df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh2.csv"))
+#df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh3.csv"))
 head(df_results_summary)
 summary(df_results_summary)
-colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
+#colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
+colnames(df_results_summary) <- c("seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
 
 # all combinations seed orchards & seed zones
 orchards <- c("PrProdidxSOh60",
@@ -297,11 +348,35 @@ dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('
                                                                                'SO 1.5gS 64°N',
                                                                                'SO 1.5g 66°N',
                                                                                'SO 1.5gS 66°N'))
+# reference
 
+dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+names(dfRef)
+
+coordinates(dfRef)<- ~ CenterLong + CenterLat
+# set crs - assume lat long
+proj4string(dfRef) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+# transform to utm
+dfRef <- spTransform(dfRef, CRSobj = utm )
+dfRef_sf <- st_as_sf(dfRef)
+rm(dfRef)
+
+# spatial join
+dfRef_sf <- st_join(dfRef_sf,sfSeedZones)
+dfRef_sf$seed.zone <- factor(dfRef_sf$seed.zone, ordered = T, levels = zoneOrder)
+
+dfRef <- dfRef_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
+                             "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
+                             "seed.zone")] %>% 
+  filter(!is.na(seed.zone)) %>% # filter to just zones
+  pivot_longer(1:8, names_to="seed.orchard",values_to="prod_idx") %>% 
+  #st_drop_geometry() %>% 
+  group_by(seed.zone,seed.orchard) %>% 
+  summarise(refMean = mean(prod_idx))
 
 # RCP4.5
 df4.5 <- dfMaster %>%
-  #filter(period != "1961-1990") %>% 
+  #filter(period != "1971-2017") %>% 
   filter(RCP != "8.5") %>% 
   #filter(GCM %in% c("Mean all GCMs","Baseline")==FALSE) %>% 
   group_by(seed.zone,period,seed.orchard) %>% 
