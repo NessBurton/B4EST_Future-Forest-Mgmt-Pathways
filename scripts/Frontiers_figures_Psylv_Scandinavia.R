@@ -373,8 +373,8 @@ for (rcp in lstRCP){
     #spplot(sumStack1) # agreement
     #spplot(sumStack2) # thresholds
     # reproject to lat long (so plotted in same projection as med region for figures)
-    sumStack1 <- projectRaster(sumStack1, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
-    sumStack2 <- projectRaster(sumStack2, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    #sumStack1rp <- projectRaster(sumStack1, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    #sumStack2rp <- projectRaster(sumStack2, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
     
     # Convert raster to dataframe
     df1 <- as.data.frame(sumStack1, xy=T)
