@@ -1,8 +1,7 @@
 
-# date: 14/12/20
+# date: 30/03/21
 # author: VB
-# description: script to test the development of Future Forest Mangement Pathways (FFMPs) using
-# data provided by Skogforsk.
+# description: script to develop Future Forest Mangement Pathways (FFMPs) using data provided by Skogforsk.
 
 #wd <- "~/R/FFMPs" # laptop
 wd <- "~/FFMPs" # sandbox
@@ -94,7 +93,7 @@ spSeedZones <- as_Spatial(sfSeedZones)
 
 
 
-### read in Scots pine predictions and join to zones ---------------------------
+### read in Scots pine predictions and summarise per zone ----------------------
 
 # list production prediction files per scenario
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -254,7 +253,7 @@ for (f in files){
 df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh4.csv"))
 head(df_results_summary)
 summary(df_results_summary)
-colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","sd","IQR","min","max","scenario")
+colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","scenario")
 #colnames(df_results_summary) <- c("seed.zone","seed.orchard","mean","scenario")
 
 dfMaster <- df_results_summary
@@ -619,10 +618,10 @@ dfFFMP <- dfMaster %>%
   group_by(RCP,period,seed.zone,seed.orchard, .drop=FALSE) %>% 
   summarise(n_GCMs = n(),
             meanPr = mean(mean, na.rm=TRUE),
-            above120 = sum(mean >= 120),
-            above110 = sum(mean >= 110),
-            above100 = sum(mean >= 100),
-            less100 = sum(mean < 100),
+            above120 = sum(mean >= 120, na.rm = TRUE),
+            above110 = sum(mean >= 110, na.rm = TRUE),
+            above100 = sum(mean >= 100, na.rm = TRUE),
+            less100 = sum(mean < 100, na.rm = TRUE),
             .groups = "keep")
 
 dfFFMP$pathway <- NA
@@ -651,6 +650,7 @@ dfRef$pathway[which(dfRef$refMean>1.1)] <- "Very good performance (above 110)"
 dfRef$pathway[which(dfRef$refMean>1.2)] <- "Excellent performance (above 120)"
 dfRef$pathway[which(is.na(dfRef$refMean))] <- NA
 dfRef$RCP <- NA
+dfRef$period <- "1971-2017"
 
 dfFFMP <- rbind(dfFFMP[,c("seed.zone","seed.orchard","period","RCP","pathway")], dfRef[,c("seed.zone","seed.orchard","period","RCP","pathway")])
 
