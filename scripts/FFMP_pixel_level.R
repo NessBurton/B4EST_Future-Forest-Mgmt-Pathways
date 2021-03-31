@@ -46,7 +46,7 @@ utm <- crs(sfSeedZones)
 
 
 
-### read in each file, remove data > thresholds, & get pathway -----------------
+### read in each file, remove data > thresholds, & new threshold vars ----------
 
 # list production prediction files per scenario
 files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv",full.names = T)
@@ -58,7 +58,7 @@ scenario_list <- c()
 
 for (f in files){
   
-  f <- files[1]
+  #f <- files[1]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
@@ -145,16 +145,87 @@ for (f in files){
   dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   
   # new var - pathway
+  dfP <- dfP[,c("GridID","CenterLat","CenterLong","PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
+         "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66")] %>% 
+    mutate(SOh60_120 = ifelse(PrProdidxSOh60 >= 1.2, 1, NA),
+           SOh60_110 = ifelse(PrProdidxSOh60 >= 1.1, 1, NA),
+           SOh60_100 = ifelse(PrProdidxSOh60 >= 1.0, 1, NA),
+           SOh60_less = ifelse(PrProdidxSOh60 < 1, 1, NA),
+           SOh62_120 = ifelse(PrProdidxSOh62 >= 1.2, 1, NA),
+           SOh62_110 = ifelse(PrProdidxSOh62 >= 1.1, 1, NA),
+           SOh62_100 = ifelse(PrProdidxSOh62 >= 1.0, 1, NA),
+           SOh62_less = ifelse(PrProdidxSOh62 < 1, 1, NA),
+           SOh64_120 = ifelse(PrProdidxSOh64 >= 1.2, 1, NA),
+           SOh64_110 = ifelse(PrProdidxSOh64 >= 1.1, 1, NA),
+           SOh64_100 = ifelse(PrProdidxSOh64 >= 1.0, 1, NA),
+           SOh64_less = ifelse(PrProdidxSOh64 < 1, 1, NA),
+           SOh66_120 = ifelse(PrProdidxSOh66 >= 1.2, 1, NA),
+           SOh66_110 = ifelse(PrProdidxSOh66 >= 1.1, 1, NA),
+           SOh66_100 = ifelse(PrProdidxSOh66 >= 1.0, 1, NA),
+           SOh66_less = ifelse(PrProdidxSOh66 < 1, 1, NA),
+           SOhs60_120 = ifelse(PrProdidxSOhs60 >= 1.2, 1, NA),
+           SOhs60_110 = ifelse(PrProdidxSOhs60 >= 1.1, 1, NA),
+           SOhs60_100 = ifelse(PrProdidxSOhs60 >= 1.0, 1, NA),
+           SOhs60_less = ifelse(PrProdidxSOhs60 < 1, 1, NA),
+           SOhs62_120 = ifelse(PrProdidxSOhs62 >= 1.2, 1, NA),
+           SOhs62_110 = ifelse(PrProdidxSOhs62 >= 1.1, 1, NA),
+           SOhs62_100 = ifelse(PrProdidxSOhs62 >= 1.0, 1, NA),
+           SOhs62_less = ifelse(PrProdidxSOhs62 < 1, 1, NA),
+           SOhs64_120 = ifelse(PrProdidxSOhs64 >= 1.2, 1, NA),
+           SOhs64_110 = ifelse(PrProdidxSOhs64 >= 1.1, 1, NA),
+           SOhs64_100 = ifelse(PrProdidxSOhs64 >= 1.0, 1, NA),
+           SOhs64_less = ifelse(PrProdidxSOhs64 < 1, 1, NA),
+           SOhs66_120 = ifelse(PrProdidxSOhs66 >= 1.2, 1, NA),
+           SOhs66_110 = ifelse(PrProdidxSOhs66 >= 1.1, 1, NA),
+           SOhs66_100 = ifelse(PrProdidxSOhs66 >= 1.0, 1, NA),
+           SOhs66_less = ifelse(PrProdidxSOhs66 < 1, 1, NA))
   
+  dfP <- dfP[,c(1:3,12:43)]
   
-  # spatial
-  coordinates(dfRef)<- ~ CenterLong + CenterLat
-  # set crs - assume lat long
-  proj4string(dfRef) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-  # transform to utm
-  dfRef <- spTransform(dfRef, CRSobj = utm )
-  dfRef_sf <- st_as_sf(dfRef)
+  dfP$scenario <- scenario
+  
+  dfP <- dfP %>% pivot_longer(cols = 4:35,
+                       names_to = "threshold",
+                       values_to = paste0(scenario,"_ag"))
+  
+  vroom_write(dfP, path = paste0(dirOut,"SO_choice_per_pixel_",scenario,".csv"), append=FALSE)
   
   }
-    
-    
+
+
+### list new files & merge -----------------------------------------------------  
+
+files2 <-  list.files(dirOut,pattern = "*.csv",full.names = T)
+files2 <- grep("SO_choice",files2, value=TRUE)
+files2 <- grep("in50",files2, value=TRUE)
+
+for(f in files2){
+  
+  #f <- files2[1]
+  scenario <- strsplit(f, "[_]")[[1]][5]
+  scenario <- strsplit(scenario, "[.]")[[1]][1]
+  assign(scenario, vroom(f))
+  
+  }
+
+head(bc45in50)
+
+df <- cbind(bc45in50[,c(1,2,3,4,5)],he45in50$he45in50_ag, mg45in50$mg45in50_ag, mi45in50$mi45in50_ag, no45in50$no45in50_ag)
+colnames(df)[5:8] <- c("he45in50_ag","mg45in50_ag","mi45in50_ag","no45in50_ag")
+
+head(df)
+
+df <- df %>% mutate(tot = rowSums(.[4:8], na.rm = TRUE),
+                    pathway = ifelse(grepl("_120",threshold) & tot >= 3, "Excellent performance (above 120)",
+                                     ifelse(grepl("_110",threshold) & tot >= 3, "Very good performance (above 110)",
+                                            ifelse(grepl("_100",threshold) & tot >= 3, "Good performance (above local)",
+                                                   ifelse(grepl("_less",threshold) & tot >= 3, "Expiry (below local)",NA)))),
+                    seed.orchard = stringr::str_split(threshold, "_") %>% map_chr(., 1))#,
+                    #id = row_number())
+
+summary(df)
+unique(df$seed.orchard)
+
+df <- df %>% pivot_wider(id_cols = c("CenterLat","CenterLong"),
+                         names_from = seed.orchard,
+                         values_from = pathway)
