@@ -198,88 +198,100 @@ for (f in files){
 
 files2 <-  list.files(dirOut,pattern = "*.csv",full.names = T)
 files2 <- grep("SO_choice",files2, value=TRUE)
-files2 <- grep("in50",files2, value=TRUE)
 
-for(f in files2){
+lstRCP <- c("45in50","85in50","45in70","85in70")
+
+for (rcp in lstRCP){
   
-  #f <- files2[1]
-  scenario <- strsplit(f, "[_]")[[1]][5]
-  scenario <- strsplit(scenario, "[.]")[[1]][1]
-  assign(scenario, vroom(f))
+  #rcp <- lstRCP[1]
+  files3 <- grep(rcp,files2, value=TRUE)
   
+  rcp.name <- ifelse(grepl("45",rcp),"RCP4.5","RCP8.5")
+  period <- ifelse(grepl("50",rcp), "2050", "2070")
+  
+  for(f in files3){
+    
+    #f <- files2[1]
+    scenario <- strsplit(f, "[_]")[[1]][5]
+    scenario <- strsplit(scenario, "[.]")[[1]][1]
+    assign(scenario, vroom(f))
+    
   }
-
-head(bc45in50)
-
-df <- cbind(bc45in50[,c(1,2,3,4,5,6)],he45in50$he45in50_ag, mg45in50$mg45in50_ag, mi45in50$mi45in50_ag, no45in50$no45in50_ag)
-colnames(df)[7:10] <- c("he45in50_ag","mg45in50_ag","mi45in50_ag","no45in50_ag")
-
-head(df)
-
-df <- df %>% mutate(tot = rowSums(.[6:10], na.rm = TRUE))
-
-df <- df %>% pivot_wider(id_cols = c("GridID","CenterLat","CenterLong"),
-                         names_from = threshold,
-                         values_from = tot)
-head(df)
-
-dfPathway <- df %>% mutate(SOh60_pathway = ifelse(SOh60_120 >=3, 4,
-                                                  ifelse(SOh60_110 >=3, 3,
-                                                         ifelse(SOh60_100 >= 3, 2,
-                                                                ifelse(SOh60_less >=3, 1, NA)))),
-                           SOh62_pathway = ifelse(SOh62_120 >=3, 4,
-                                                  ifelse(SOh62_110 >=3, 3,
-                                                         ifelse(SOh62_100 >= 3, 2,
-                                                                   ifelse(SOh62_less >=3, 1, NA)))),
-                           SOh64_pathway = ifelse(SOh64_120 >=3, 4,
-                                                  ifelse(SOh64_110 >=3, 3,
-                                                            ifelse(SOh64_100 >= 3, 2,
-                                                                   ifelse(SOh64_less >=3, 1, NA)))),
-                           SOh66_pathway = ifelse(SOh66_120 >=3, 4,
-                                                  ifelse(SOh66_110 >=3, 3,
-                                                            ifelse(SOh66_100 >= 3, 2,
-                                                                   ifelse(SOh66_less >=3, 1, NA)))),
-                           SOhs60_pathway = ifelse(SOhs60_120 >=3, 4,
-                                                      ifelse(SOhs60_110 >=3, 3,
-                                                             ifelse(SOhs60_100 >= 3, 2,
-                                                                    ifelse(SOhs60_less >=3, 1, NA)))),
-                           SOhs62_pathway = ifelse(SOhs62_120 >=3, 4,
-                                                      ifelse(SOhs62_110 >=3, 3,
-                                                             ifelse(SOhs62_100 >= 3, 2,
-                                                                    ifelse(SOhs62_less >=3, 1, NA)))),
-                           SOhs64_pathway = ifelse(SOhs64_120 >=3, 4,
-                                                      ifelse(SOhs64_110 >=3, 3,
-                                                             ifelse(SOhs64_100 >= 3, 2,
-                                                                    ifelse(SOhs64_less >=3, 1, NA)))),
-                           SOhs66_pathway = ifelse(SOhs66_120 >=3, 4,
-                                                      ifelse(SOhs66_110 >=3, 3,
-                                                             ifelse(SOhs66_100 >= 3, 2,
-                                                                    ifelse(SOhs66_less >=3, 1, NA)))))
-
-colnames(dfPathway)
-
-dfPathway <- dfPathway[,c("GridID","CenterLat","CenterLong",
-             "SOh60_pathway","SOh62_pathway","SOh64_pathway","SOh66_pathway","SOhs60_pathway","SOhs62_pathway","SOhs64_pathway","SOhs66_pathway")]
-
-coordinates(dfPathway) <- ~ CenterLong + CenterLat
-
-# define lat long crs
-proj4string(dfPathway) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
-
-# transform points to utm
-spPathway <- spTransform(dfPathway, CRSobj = utm)
-
-rstUTM <- raster(crs = crs(spPathway), resolution = c(1100,1100), ext = extent(spPathway))
-
-for (var in names(spPathway)[c(2:9)]){ 
   
-  #var <- names(spPathway)[2]
+  #head(bc45in50)
   
-  rst <- rasterize(spPathway, rstUTM, spPathway[[var]], fun=max, na.rm=TRUE) 
+  df <- cbind(bc45in50[,c(1,2,3,4,5,6)],he45in50$he45in50_ag, mg45in50$mg45in50_ag, mi45in50$mi45in50_ag, no45in50$no45in50_ag)
+  colnames(df)[7:10] <- c("he45in50_ag","mg45in50_ag","mi45in50_ag","no45in50_ag")
   
-  writeRaster(rst, paste0(dirOut,"pathway_rst/",var,"_RCP4.5_2050_GCMagreement.tif"), overwrite=TRUE)
+  head(df)
   
-  print(paste0("Written raster for: ", var))
+  df <- df %>% mutate(tot = rowSums(.[6:10], na.rm = TRUE))
+  
+  df <- df %>% pivot_wider(id_cols = c("GridID","CenterLat","CenterLong"),
+                           names_from = threshold,
+                           values_from = tot)
+  head(df)
+  
+  dfPathway <- df %>% mutate(SOh60_pathway = ifelse(SOh60_120 >=3, 4,
+                                                    ifelse(SOh60_110 >=3, 3,
+                                                           ifelse(SOh60_100 >= 3, 2,
+                                                                  ifelse(SOh60_less >=3, 1, NA)))),
+                             SOh62_pathway = ifelse(SOh62_120 >=3, 4,
+                                                    ifelse(SOh62_110 >=3, 3,
+                                                           ifelse(SOh62_100 >= 3, 2,
+                                                                  ifelse(SOh62_less >=3, 1, NA)))),
+                             SOh64_pathway = ifelse(SOh64_120 >=3, 4,
+                                                    ifelse(SOh64_110 >=3, 3,
+                                                           ifelse(SOh64_100 >= 3, 2,
+                                                                  ifelse(SOh64_less >=3, 1, NA)))),
+                             SOh66_pathway = ifelse(SOh66_120 >=3, 4,
+                                                    ifelse(SOh66_110 >=3, 3,
+                                                           ifelse(SOh66_100 >= 3, 2,
+                                                                  ifelse(SOh66_less >=3, 1, NA)))),
+                             SOhs60_pathway = ifelse(SOhs60_120 >=3, 4,
+                                                     ifelse(SOhs60_110 >=3, 3,
+                                                            ifelse(SOhs60_100 >= 3, 2,
+                                                                   ifelse(SOhs60_less >=3, 1, NA)))),
+                             SOhs62_pathway = ifelse(SOhs62_120 >=3, 4,
+                                                     ifelse(SOhs62_110 >=3, 3,
+                                                            ifelse(SOhs62_100 >= 3, 2,
+                                                                   ifelse(SOhs62_less >=3, 1, NA)))),
+                             SOhs64_pathway = ifelse(SOhs64_120 >=3, 4,
+                                                     ifelse(SOhs64_110 >=3, 3,
+                                                            ifelse(SOhs64_100 >= 3, 2,
+                                                                   ifelse(SOhs64_less >=3, 1, NA)))),
+                             SOhs66_pathway = ifelse(SOhs66_120 >=3, 4,
+                                                     ifelse(SOhs66_110 >=3, 3,
+                                                            ifelse(SOhs66_100 >= 3, 2,
+                                                                   ifelse(SOhs66_less >=3, 1, NA)))))
+  
+  colnames(dfPathway)
+  
+  dfPathway <- dfPathway[,c("GridID","CenterLat","CenterLong",
+                            "SOh60_pathway","SOh62_pathway","SOh64_pathway","SOh66_pathway","SOhs60_pathway","SOhs62_pathway","SOhs64_pathway","SOhs66_pathway")]
+  
+  coordinates(dfPathway) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(dfPathway) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spPathway <- spTransform(dfPathway, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spPathway), resolution = c(1100,1100), ext = extent(spPathway))
+  
+  for (var in names(spPathway)[c(2:9)]){ 
+    
+    #var <- names(spPathway)[2]
+    
+    rst <- rasterize(spPathway, rstUTM, spPathway[[var]], fun=max, na.rm=TRUE) 
+    
+    writeRaster(rst, paste0(dirOut,"pathway_rst/",var,"_",rcp.name,"_",period,"_GCMagreement.tif"), overwrite=TRUE)
+    
+    print(paste0("Written raster for: ", var))
+    
+  }
+  
   
 }
 
@@ -288,47 +300,60 @@ for (var in names(spPathway)[c(2:9)]){
 
 lstRsts <- list.files(paste0(dirOut,"pathway_rst"),full.names = T)
 
-for (i in lstRsts){
+lstRCP2 <- c("RCP4.5","RCP8.5")
+
+for (rcp in lstRCP2){
   
-  #i <- lstRsts[1]
+  #rcp <- lstRCP2[1]
   
-  seed.orchard <- stringr::str_split(i,"/") %>% map_chr(.,4)
-  seed.orchard <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,1)
+  RCP_rsts <- grep(rcp,lstRsts,value=TRUE)
   
-  rst <- raster(i)
-  
-  # Convert raster to dataframe
-  dfPathway <- as.data.frame(rst, xy=T)
-  colnames(dfPathway) <- c("x","y","code")
-  dfPathway$pathway <- NA
-  dfPathway$pathway[which(dfPathway$code == 1)] <- "Expiry (below local)"
-  dfPathway$pathway[which(dfPathway$code == 2)] <- "Good performance (above local)"
-  dfPathway$pathway[which(dfPathway$code == 3)] <- "Very good performance (above 110)"
-  dfPathway$pathway[which(dfPathway$code == 4)] <- "Excellent performance (above 120)"
-  
-  dfPathway$pathway <- factor(dfPathway$pathway, ordered=T, levels=c("Excellent performance (above 120)","Very good performance (above 110)",
-                                                                     "Good performance (above local)","Expiry (below local)"))
-  
-  (p1 <- ggplot(data = dfPathway) +
-      geom_sf(data = sweden, fill=NA)+
-      geom_tile(data = dfPathway, mapping = aes(x = x, y = y, fill = pathway), size = 1) +
-      scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, 
-                         labels = c("Excellent performance (above 120)","Very good performance (above 110)",
-                                   "Good performance (above local)","Expiry (below local)","Beyond model thresholds"))+
-      #labs(fill="Performance")+
-      theme_bw()+
-      ggtitle(seed.orchard)+
-      theme(plot.title = element_text(face="bold",size=22),
-            axis.title = element_blank(),
-            axis.text = element_blank(),
-            axis.ticks = element_blank(),
-            #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-            #legend.text = element_text(size = 14)))
-            legend.position = "none"))
-  
-  ggsave(p1, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,".png"), width=8, height=10, dpi=300)
+  for (i in RCP_rsts){
+    
+    #i <- RCP_rsts[1]
+    
+    seed.orchard <- stringr::str_split(i,"/") %>% map_chr(.,4)
+    period <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,4)
+    seed.orchard <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,1)
+    
+    rst <- raster(i)
+    
+    # Convert raster to dataframe
+    dfPathway <- as.data.frame(rst, xy=T)
+    colnames(dfPathway) <- c("x","y","code")
+    dfPathway$pathway <- NA
+    dfPathway$pathway[which(dfPathway$code == 1)] <- "Expiry (below local)"
+    dfPathway$pathway[which(dfPathway$code == 2)] <- "Good performance (above local)"
+    dfPathway$pathway[which(dfPathway$code == 3)] <- "Very good performance (above 110)"
+    dfPathway$pathway[which(dfPathway$code == 4)] <- "Excellent performance (above 120)"
+    
+    dfPathway$pathway <- factor(dfPathway$pathway, ordered=T, levels=c("Excellent performance (above 120)","Very good performance (above 110)",
+                                                                       "Good performance (above local)","Expiry (below local)"))
+    
+    (p1 <- ggplot(data = dfPathway) +
+        geom_sf(data = sweden, fill=NA)+
+        geom_tile(data = dfPathway, mapping = aes(x = x, y = y, fill = pathway), size = 1) +
+        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, 
+                           labels = c("Excellent performance (above 120)","Very good performance (above 110)",
+                                      "Good performance (above local)","Expiry (below local)","Beyond model thresholds"))+
+        #labs(fill="Performance")+
+        theme_bw()+
+        ggtitle(paste0(seed.orchard, " | ", period))+
+        theme(plot.title = element_text(face="bold",size=22),
+              axis.title = element_blank(),
+              axis.text = element_blank(),
+              axis.ticks = element_blank(),
+              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 14)))
+              legend.position = "none"))
+    
+    ggsave(p1, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,"_",rcp,"_",period,".png"), width=8, height=10, dpi=300)
+    
+  }
   
 }
+
+
 
 # get legend
 # in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
@@ -351,12 +376,37 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("ixel", lstPlots, value=TRUE)
-#lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/Pixel_Pathway_legend.png" )
 
-r <- lapply(lstPlots, png::readPNG)
-g <- lapply(r, grid::rasterGrob)
-(c <- gridExtra::grid.arrange(grobs=g, 
+lstPlots_RCP45 <- grep("4.5", lstPlots, value=TRUE)
+
+lst1 <- grep("Oh6", lstPlots_RCP45, value=TRUE)
+lst1 <- append(lst1, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
+
+r1 <- lapply(lst1, png::readPNG)
+g1 <- lapply(r1, grid::rasterGrob)
+
+ggsave(gridExtra::grid.arrange(grobs=g1, 
                                ncol=3,
-                               layout_matrix = cbind(c(1,2,3,4), c(5,6,7,8), c(9,9,9,9)))) # CHANGE THESE
+                               layout_matrix = cbind(c(1,3,5,7),
+                                                     c(2,4,6,8),
+                                                     c(9,9,9,9))), 
+       file=paste0(dirFigs,"Seed_orchard_H_pathways_RCP4.5.png"),
+       width=24, 
+       height=40, 
+       dpi=300)
 
-ggsave(c, file=paste0(dirFigs,"Seed_orchard_pathways_RCP4.5_2050.png"),width=24, height=40, dpi=300)
+lst2 <- grep("Ohs6", lstPlots_RCP45, value=TRUE)
+lst2 <- append(lst2, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
+
+r2 <- lapply(lst2, png::readPNG)
+g2 <- lapply(r2, grid::rasterGrob)
+
+ggsave(gridExtra::grid.arrange(grobs=g2, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,3,5,7),
+                                                     c(2,4,6,8),
+                                                     c(9,9,9,9))), 
+       file=paste0(dirFigs,"Seed_orchard_HS_pathways_RCP4.5.png"),
+       width=24, 
+       height=40, 
+       dpi=300)
