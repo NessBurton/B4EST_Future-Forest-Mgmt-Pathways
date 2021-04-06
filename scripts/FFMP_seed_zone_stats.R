@@ -118,63 +118,9 @@ for (f in files){
   print("Read in data and apply thresholds")
   dfP <- vroom(f)
   
-  # apply thresholds (survival, latitudinal transfer, and GDD5)
+  # apply predictability limits (latitudinal transfer and GDD5)
   
-  # for survival, threshold for 2050 should use baseline period survival
-  if (grepl("50", scenario)==TRUE){
-    
-    print(paste0("Reading in reference climate file for survival thresholds"))
-    
-    # read in reference file
-    dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
-    names(dfRef)
-    dfP$refSurvivalSOh60 <- dfRef$PrSurvSOh60
-    dfP$refSurvivalSOh62 <- dfRef$PrSurvSOh62
-    dfP$refSurvivalSOh64 <- dfRef$PrSurvSOh64
-    dfP$refSurvivalSOh66 <- dfRef$PrSurvSOh66
-    dfP$refSurvivalSOhs60 <- dfRef$PrSurvSOhs60
-    dfP$refSurvivalSOhs62 <- dfRef$PrSurvSOhs62
-    dfP$refSurvivalSOhs64 <- dfRef$PrSurvSOhs64
-    dfP$refSurvivalSOhs66 <- dfRef$PrSurvSOhs66
-    
-    dfP$PrProdidxSOh60[which(dfP$refSurvivalSOh60 <0.5)] <- NA
-    dfP$PrProdidxSOh62[which(dfP$refSurvivalSOh62 <0.5)] <- NA
-    dfP$PrProdidxSOh64[which(dfP$refSurvivalSOh64 <0.5)] <- NA
-    dfP$PrProdidxSOh66[which(dfP$refSurvivalSOh66 <0.5)] <- NA
-    dfP$PrProdidxSOhs60[which(dfP$refSurvivalSOhs60 <0.5)] <- NA
-    dfP$PrProdidxSOhs62[which(dfP$refSurvivalSOhs62 <0.5)] <- NA
-    dfP$PrProdidxSOhs64[which(dfP$refSurvivalSOhs64 <0.5)] <- NA
-    dfP$PrProdidxSOhs66[which(dfP$refSurvivalSOhs66 <0.5)] <- NA
-    
-    # thresholds for 2070 should use 2050 survival
-    }else{
-      
-      print(paste0("Reading in 2050 file for survival thresholds"))
-      
-      # read in 2050 file
-      df2050 <- vroom(paste0(dirData, "Productionpredictions/",GCM,"50_SO1.5g_predictions.csv"))
-      names(df2050)
-      dfP$t50SurvivalSOh60 <- df2050$PrSurvSOh60
-      dfP$t50SurvivalSOh62 <- df2050$PrSurvSOh62
-      dfP$t50SurvivalSOh64 <- df2050$PrSurvSOh64
-      dfP$t50SurvivalSOh66 <- df2050$PrSurvSOh66
-      dfP$t50SurvivalSOhs60 <- df2050$PrSurvSOhs60
-      dfP$t50SurvivalSOhs62 <- df2050$PrSurvSOhs62
-      dfP$t50SurvivalSOhs64 <- df2050$PrSurvSOhs64
-      dfP$t50SurvivalSOhs66 <- df2050$PrSurvSOhs66
-      
-      dfP$PrProdidxSOh60[which(dfP$t50SurvivalSOh60 <0.5)] <- NA
-      dfP$PrProdidxSOh62[which(dfP$t50SurvivalSOh62 <0.5)] <- NA
-      dfP$PrProdidxSOh64[which(dfP$t50SurvivalSOh64 <0.5)] <- NA
-      dfP$PrProdidxSOh66[which(dfP$t50SurvivalSOh66 <0.5)] <- NA
-      dfP$PrProdidxSOhs60[which(dfP$t50SurvivalSOhs60 <0.5)] <- NA
-      dfP$PrProdidxSOhs62[which(dfP$t50SurvivalSOhs62 <0.5)] <- NA
-      dfP$PrProdidxSOhs64[which(dfP$t50SurvivalSOhs64 <0.5)] <- NA
-      dfP$PrProdidxSOhs66[which(dfP$t50SurvivalSOhs66 <0.5)] <- NA
-      
-    }
-  
-  
+  # latitudinal transfer
   dfP$PrProdidxSOh60[which(dfP$CenterLat > 65 | dfP$CenterLat < 55)] <- NA
   dfP$PrProdidxSOh62[which(dfP$CenterLat > 67 | dfP$CenterLat < 57)] <- NA
   dfP$PrProdidxSOh64[which(dfP$CenterLat > 69 | dfP$CenterLat < 59)] <- NA
@@ -184,7 +130,7 @@ for (f in files){
   dfP$PrProdidxSOhs64[which(dfP$CenterLat > 69 | dfP$CenterLat < 59)] <- NA
   dfP$PrProdidxSOhs66[which(dfP$CenterLat > 71 | dfP$CenterLat < 61)] <- NA
   
-  # and GDD5
+  # GDD5
   dfP$PrProdidxSOh60[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOh62[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOh64[which(dfP$GDD5Future < 527| dfP$GDD5Future > 1349)] <- NA
@@ -193,6 +139,44 @@ for (f in files){
   dfP$PrProdidxSOhs62[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
+  
+  # where to apply survival limits?
+  # for survival, threshold for 2050 should use baseline period survival
+  if (grepl("50", scenario)==TRUE){
+
+    print(paste0("Reading in reference climate file for survival thresholds"))
+
+    # read in reference file
+    dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+    names(dfRef)
+    dfP$SurvivalSOh60 <- dfRef$PrSurvSOh60
+    dfP$SurvivalSOh62 <- dfRef$PrSurvSOh62
+    dfP$SurvivalSOh64 <- dfRef$PrSurvSOh64
+    dfP$SurvivalSOh66 <- dfRef$PrSurvSOh66
+    dfP$SurvivalSOhs60 <- dfRef$PrSurvSOhs60
+    dfP$SurvivalSOhs62 <- dfRef$PrSurvSOhs62
+    dfP$SurvivalSOhs64 <- dfRef$PrSurvSOhs64
+    dfP$SurvivalSOhs66 <- dfRef$PrSurvSOhs66
+
+    # thresholds for 2070 should use 2050 survival
+  }else{
+
+    print(paste0("Reading in 2050 file for survival thresholds"))
+
+    # read in 2050 file
+    df2050 <- vroom(paste0(dirData, "Productionpredictions/",GCM,"50_SO1.5g_predictions.csv"))
+    names(df2050)
+    dfP$SurvivalSOh60 <- df2050$PrSurvSOh60
+    dfP$SurvivalSOh62 <- df2050$PrSurvSOh62
+    dfP$SurvivalSOh64 <- df2050$PrSurvSOh64
+    dfP$SurvivalSOh66 <- df2050$PrSurvSOh66
+    dfP$SurvivalSOhs60 <- df2050$PrSurvSOhs60
+    dfP$SurvivalSOhs62 <- df2050$PrSurvSOhs62
+    dfP$SurvivalSOhs64 <- df2050$PrSurvSOhs64
+    dfP$SurvivalSOhs66 <- df2050$PrSurvSOhs66
+
+  }
+  
   
   print("Convert to spatial, transform to utm")
   
@@ -210,11 +194,14 @@ for (f in files){
   dfP_sf <- st_join(dfP_sf,sfSeedZones)
   dfP_sf$seed.zone <- factor(dfP_sf$seed.zone, ordered = T, levels = zoneOrder)
   
+  # count observations per seed zone
+  dfP_sf <- dfP_sf %>% group_by(seed.zone) %>% mutate(count = n())
+  
   print("Transform to long format")
   
   df_long <- dfP_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
                        "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
-                       "seed.zone")] %>% 
+                       "seed.zone","count")] %>% 
     filter(!is.na(seed.zone)) %>% # filter to just zones
     st_drop_geometry() %>%
     pivot_longer(1:8, names_to="seed_orchard",values_to="prod_idx")
@@ -222,14 +209,37 @@ for (f in files){
   # convert to %
   df_long$prod_idx <- df_long$prod_idx * 100
   
+  df_long2 <- dfP_sf[,c("SurvivalSOh60","SurvivalSOh62","SurvivalSOh64","SurvivalSOh66",
+                        "SurvivalSOhs60","SurvivalSOhs62","SurvivalSOhs64","SurvivalSOhs66",
+                        "seed.zone")] %>% 
+    filter(!is.na(seed.zone)) %>% # filter to just zones
+    st_drop_geometry() %>%
+    pivot_longer(1:8, names_to="seed_orchard",values_to="survival")
+  
+  # convert to %
+  df_long2$survival <- df_long2$survival * 100
+  
+  df_long$survival <- df_long2$survival
+  
+  df_long <- df_long %>% group_by(seed.zone,seed_orchard) %>% mutate(limits.perc = sum(is.na(prod_idx))/count*100)
+  
   df_long$scenario <- scenario
   
   print("Calculate summaries")
   
   df_summary <- df_long %>% 
-    filter(!is.na(prod_idx)) %>% 
-    group_by(as.factor(seed.zone), as.factor(seed_orchard), .drop=FALSE) %>% # group by zone
-    summarise(PrMean = mean(prod_idx, na.rm=TRUE), .groups = "keep")
+    #ungroup() %>% 
+    #filter(!is.na(prod_idx)) %>% 
+    group_by(seed.zone, seed_orchard, .drop=FALSE) %>% # group by zone
+    summarise(.groups = "keep",
+              count = max(count),
+              PrMean = mean(prod_idx, na.rm=TRUE), 
+              SurvMean = mean(survival, na.rm=TRUE),
+              perc120 = sum(prod_idx>=120)/count*100,
+              perc110 = sum(prod_idx>=110 & prod_idx < 120)/count*100,
+              perc100 = sum(prod_idx>=100 & prod_idx < 110)/count*100,
+              percLess = sum(prod_idx<100)/count*100,
+              LimitsPerc = as.integer(max(limits.perc)))
     #summarise_if(is.numeric,c("mean","sd","IQR","min","max"), .groups = "keep") #%>% 
     #summarise(c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66"),.funs=c("mean","sd","IQR","min","max"))
   
@@ -241,7 +251,7 @@ for (f in files){
   print(paste0("Processed scenario: ",scenario))
   
   if (f == files[20]){
-    write.csv(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh4.csv"))
+    write.csv(df_results_summary, paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh5.csv"))
   }
   
 }
@@ -250,7 +260,7 @@ for (f in files){
 
 ### read in summaries ----------------------------------------------------------
 
-df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh4.csv"))
+df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh5.csv"))
 head(df_results_summary)
 summary(df_results_summary)
 colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","scenario")
