@@ -30,7 +30,7 @@ library(viridis)
 # if pred for each location meets any of these, then assign 1 in the new var
 # group by RCP, the new vars across GCMs (should then get agreement)
 # can then use this to assign pathway classification - rasterise and plot this
-# repeat for reference period separately
+# ONLY FOR 2050
 
 
 ### sweden outline -------------------------------------------------------------
@@ -54,6 +54,7 @@ files <-  list.files(paste0(dirData, "Productionpredictions/"),pattern = "*.csv"
 files
 # remove ensemble mean and reference
 files <- files[-c(9:12,25)]
+# just 2050
 
 scenario_list <- c()
 
@@ -377,6 +378,7 @@ library(gridExtra)
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("ixel", lstPlots, value=TRUE)
 
+#
 lstPlots_RCP45 <- grep("4.5", lstPlots, value=TRUE)
 
 lst1 <- grep("Oh6", lstPlots_RCP45, value=TRUE)
