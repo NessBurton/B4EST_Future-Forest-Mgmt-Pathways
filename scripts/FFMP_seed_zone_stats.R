@@ -239,6 +239,7 @@ for (f in files){
               perc110 = sum(prod_idx>=110 & prod_idx < 120)/count*100,
               perc100 = sum(prod_idx>=100 & prod_idx < 110)/count*100,
               percLess = sum(prod_idx<100)/count*100,
+              percSurv = sum(survival<50/count*100),
               LimitsPerc = as.integer(max(limits.perc)))
     #summarise_if(is.numeric,c("mean","sd","IQR","min","max"), .groups = "keep") #%>% 
     #summarise(c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66"),.funs=c("mean","sd","IQR","min","max"))
