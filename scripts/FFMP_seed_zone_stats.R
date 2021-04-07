@@ -880,10 +880,16 @@ dfPerc <- dfMaster2 %>%
   summarise(n_GCMs = n(),
             limits.true = mean(limitsPerc, na.rm=TRUE),
             limits.gcm = sum(limitsPerc >= 50, na.rm = TRUE)/n_GCMs*100,
+            true.120 = mean(perc120, na.rm=TRUE),
             .groups = "keep") %>% 
   mutate(limits.true = limits.true/100,
          limits.false = 1 - limits.true,
-         limits.gcm = limits.gcm/100)
+         limits.gcm = limits.gcm/100,
+         true.120 = true.120/100,
+         false.120 = 1 - true.120)
+
+dfPerc$true.120[which(is.na(dfPerc$true.120))]<-0
+dfPerc$false.120[which(is.na(dfPerc$false.120))]<-0
 
 mooncolor <- "grey"
 moonfill <- "white"
@@ -895,31 +901,59 @@ dfPerc2 <- dfPerc %>%
 library(gggibbous)
 library(hrbrthemes)
 
+# model limits area
 (p1 <- dfPerc %>% 
     filter(RCP=="4.5" & period == "2041-2060") %>% 
     ggplot(aes(x = seed.zone, y = seed.orchard)) +
-    geom_moon(aes(ratio = limits.true), 
-            fill = mooncolor, 
-            colour = mooncolor) +
+    geom_moon(aes(ratio = limits.true),
+              fill = mooncolor,
+              colour = mooncolor) +
     geom_moon(aes(ratio = limits.false),
-            fill = moonfill,
-            right = FALSE,
-            colour = mooncolor) +
+              fill = moonfill,
+              right = FALSE,
+              colour = mooncolor) +
+    geom_moon(data = dfPerc2, aes(ratio = limits.true),
+              fill = highlightmoon,
+              colour = highlightmoon) +
+    geom_moon(data = dfPerc2, aes(ratio = limits.false),
+              fill = NA,
+              right = FALSE,
+              colour = highlightmoon) +
+    ylab("Seed orchard") +
+    xlab("Seed zone") +
+    theme_bw())
+
+png(paste0(dirFigs,"ModelLimitMoons.png"), width = 10, height = 7, units = "in", res = 200)
+p1
+dev.off()
+
+
+# 120 area
+(p2 <- dfPerc %>% 
+    filter(RCP=="4.5" & period == "2041-2060") %>% 
+    ggplot(aes(x = seed.zone, y = seed.orchard)) +
+    geom_moon(aes(ratio = limits.true), 
+              fill = mooncolor, 
+              colour = mooncolor) +
+    geom_moon(aes(ratio = limits.false),
+              fill = moonfill,
+              right = FALSE,
+              colour = mooncolor) +
     geom_moon(data = dfPerc2, aes(ratio = limits.true), 
-            fill = highlightmoon, 
-            colour = highlightmoon) +
+              fill = highlightmoon, 
+              colour = highlightmoon) +
     geom_moon(data = dfPerc2, aes(ratio = limits.false), 
-            fill = NA, 
-            right = FALSE, 
-            colour = highlightmoon) +
+              fill = NA, 
+              right = FALSE, 
+              colour = highlightmoon) +
     #facet_wrap(~seed.zone)+
     ylab("Seed orchard") +
     xlab("Seed zone") +
     theme_bw())#+
-    #labs(#title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
-         #subtitle = "Red crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone"))
-         #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
-    #hrbrthemes::theme_ipsum_rc()) 
+#labs(#title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
+#subtitle = "Red crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone"))
+#caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
+#hrbrthemes::theme_ipsum_rc()) 
 
 png(paste0(dirFigs,"ModelLimitMoons.png"), width = 10, height = 7, units = "in", res = 200)
 p1
