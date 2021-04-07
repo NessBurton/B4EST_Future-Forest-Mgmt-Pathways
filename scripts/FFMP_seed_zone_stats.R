@@ -681,6 +681,7 @@ dfFFMP <- dfMaster2 %>%
             above110 = sum(prodidxMean >= 110 & survMean >=50, na.rm=TRUE),
             above100 = sum(prodidxMean >= 100 & survMean >=50, na.rm=TRUE),
             less100 = sum(prodidxMean < 100 & survMean >=50, na.rm=TRUE),
+            survLims = sum(survMean < 50, na.rm=TRUE),
             beyondLims = sum(limitsPerc >= 50, na.rm = TRUE),
             .groups = "keep")
 
@@ -732,7 +733,9 @@ for (i in c(1:nrow(dfFFMP))){
 }
 
 dfFFMP$pathway[which(is.na(dfFFMP$pathway)&is.na(dfFFMP$meanPr))] <- "Beyond model limits"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$survLims>=3)] <- "Expiry (poor survival)"
 dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv<50)] <- "Expiry (poor survival)"
+
 dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr < 100)] <- "Expiry (below local)"
 dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 100)] <- "Good performance (above local)"
 dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 110)] <- "Very good performance (above 110%)"
@@ -777,7 +780,7 @@ png(paste0(wd,"/figures/SO_FFMP_RCP8.5.png"), width = 600, height = 850)
                                 "Good performance (above local)",
                                 "Expiry (below local)",
                                 "Expiry (poor survival)",
-                                "Beyond model thresholds"))+
+                                "Beyond model limits"))+
   coord_flip()+
   facet_wrap(~seed.zone, ncol = 2)+
   theme_bw()+
@@ -802,14 +805,15 @@ png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 300, height = 1000
                                 "Good performance (above local)",
                                 "Expiry (below local)",
                                 "Expiry (poor survival)",
-                                "Beyond model thresholds"))+
+                                "Beyond model limits"))+
   facet_grid(seed.orchard~period)+
   theme_bw()+
     ggtitle("RCP4.5")+
-    theme(plot.title = element_text(face="bold",size=30),
+    theme(plot.title = element_text(face="bold",size=28),
           axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          legend.position = "none"))#+#labs(fill = "Performance"))
+          axis.ticks.x = element_blank(),#)+
+          legend.position = "none"))#,
+          #labs(fill = "Performance"))
 dev.off()
 
 # plot 8.5
@@ -827,7 +831,7 @@ png(paste0(wd,"/figures/SO_FFMP_RCP8.5_spatial.png"), width = 300, height = 1000
     facet_grid(seed.orchard~period)+
     theme_bw()+
     ggtitle("RCP8.5")+
-    theme(plot.title = element_text(face="bold",size=30),
+    theme(plot.title = element_text(face="bold",size=28),
           axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),
           legend.position = "none"))#+#labs(fill = "Performance"))
@@ -842,7 +846,7 @@ dev.off()
 # Convert to a ggplot and save
 #legend <- as_ggplot(legend)
 #plot(legend)
-#ggsave(legend, file=paste0(dirFigs,"FFMP_legend.png"),width=3, height=6, dpi=300)
+#ggsave(legend, file=paste0(dirFigs,"FFMP_legend.png"),width=2.5, height=6, dpi=300)
 
 
 # combine side by side
