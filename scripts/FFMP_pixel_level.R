@@ -71,61 +71,7 @@ for (f in files){
   print("Read in data and apply thresholds")
   dfP <- vroom(f)
   
-  # apply thresholds (survival, latitudinal transfer, and GDD5)
-  
-  # for survival, threshold for 2050 should use baseline period survival
-  if (grepl("50", scenario)==TRUE){
-    print(paste0("Reading in reference climate file for survival thresholds"))
-    
-    # read in reference file
-    dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
-    names(dfRef)
-    dfP$refSurvivalSOh60 <- dfRef$PrSurvSOh60
-    dfP$refSurvivalSOh62 <- dfRef$PrSurvSOh62
-    dfP$refSurvivalSOh64 <- dfRef$PrSurvSOh64
-    dfP$refSurvivalSOh66 <- dfRef$PrSurvSOh66
-    dfP$refSurvivalSOhs60 <- dfRef$PrSurvSOhs60
-    dfP$refSurvivalSOhs62 <- dfRef$PrSurvSOhs62
-    dfP$refSurvivalSOhs64 <- dfRef$PrSurvSOhs64
-    dfP$refSurvivalSOhs66 <- dfRef$PrSurvSOhs66
-    
-    dfP$PrProdidxSOh60[which(dfP$refSurvivalSOh60 <0.5)] <- NA
-    dfP$PrProdidxSOh62[which(dfP$refSurvivalSOh62 <0.5)] <- NA
-    dfP$PrProdidxSOh64[which(dfP$refSurvivalSOh64 <0.5)] <- NA
-    dfP$PrProdidxSOh66[which(dfP$refSurvivalSOh66 <0.5)] <- NA
-    dfP$PrProdidxSOhs60[which(dfP$refSurvivalSOhs60 <0.5)] <- NA
-    dfP$PrProdidxSOhs62[which(dfP$refSurvivalSOhs62 <0.5)] <- NA
-    dfP$PrProdidxSOhs64[which(dfP$refSurvivalSOhs64 <0.5)] <- NA
-    dfP$PrProdidxSOhs66[which(dfP$refSurvivalSOhs66 <0.5)] <- NA
-    
-    # thresholds for 2070 should use 2050 survival
-    }else{
-    
-    print(paste0("Reading in 2050 file for survival thresholds"))
-    
-    # read in 2050 file
-    df2050 <- vroom(paste0(dirData, "Productionpredictions/",GCM,"50_SO1.5g_predictions.csv"))
-    names(df2050)
-    dfP$t50SurvivalSOh60 <- df2050$PrSurvSOh60
-    dfP$t50SurvivalSOh62 <- df2050$PrSurvSOh62
-    dfP$t50SurvivalSOh64 <- df2050$PrSurvSOh64
-    dfP$t50SurvivalSOh66 <- df2050$PrSurvSOh66
-    dfP$t50SurvivalSOhs60 <- df2050$PrSurvSOhs60
-    dfP$t50SurvivalSOhs62 <- df2050$PrSurvSOhs62
-    dfP$t50SurvivalSOhs64 <- df2050$PrSurvSOhs64
-    dfP$t50SurvivalSOhs66 <- df2050$PrSurvSOhs66
-    
-    dfP$PrProdidxSOh60[which(dfP$t50SurvivalSOh60 <0.5)] <- NA
-    dfP$PrProdidxSOh62[which(dfP$t50SurvivalSOh62 <0.5)] <- NA
-    dfP$PrProdidxSOh64[which(dfP$t50SurvivalSOh64 <0.5)] <- NA
-    dfP$PrProdidxSOh66[which(dfP$t50SurvivalSOh66 <0.5)] <- NA
-    dfP$PrProdidxSOhs60[which(dfP$t50SurvivalSOhs60 <0.5)] <- NA
-    dfP$PrProdidxSOhs62[which(dfP$t50SurvivalSOhs62 <0.5)] <- NA
-    dfP$PrProdidxSOhs64[which(dfP$t50SurvivalSOhs64 <0.5)] <- NA
-    dfP$PrProdidxSOhs66[which(dfP$t50SurvivalSOhs66 <0.5)] <- NA
-    
-  }
-  
+  # apply predictability limits (latitudinal transfer, and GDD5)
   # lat transfer
   dfP$PrProdidxSOh60[which(dfP$CenterLat > 65 | dfP$CenterLat < 55)] <- NA
   dfP$PrProdidxSOh62[which(dfP$CenterLat > 67 | dfP$CenterLat < 57)] <- NA
@@ -146,41 +92,58 @@ for (f in files){
   dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   
+  print("Read in reference survival")
+  
+  # for survival, threshold for 2050 should use baseline period survival
+  dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+  names(dfRef)
+  dfP$refSurvivalSOh60 <- dfRef$PrSurvSOh60
+  dfP$refSurvivalSOh62 <- dfRef$PrSurvSOh62
+  dfP$refSurvivalSOh64 <- dfRef$PrSurvSOh64
+  dfP$refSurvivalSOh66 <- dfRef$PrSurvSOh66
+  dfP$refSurvivalSOhs60 <- dfRef$PrSurvSOhs60
+  dfP$refSurvivalSOhs62 <- dfRef$PrSurvSOhs62
+  dfP$refSurvivalSOhs64 <- dfRef$PrSurvSOhs64
+  dfP$refSurvivalSOhs66 <- dfRef$PrSurvSOhs66
+  
   # new var - pathway
-  dfP <- dfP[,c("GridID","CenterLat","CenterLong","PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
-         "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66")] %>% 
-    mutate(SOh60_120 = ifelse(PrProdidxSOh60 >= 1.2, 1, NA),
-           SOh60_110 = ifelse(PrProdidxSOh60 >= 1.1, 1, NA),
-           SOh60_100 = ifelse(PrProdidxSOh60 >= 1.0, 1, NA),
-           SOh60_less = ifelse(PrProdidxSOh60 < 1, 1, NA),
-           SOh62_120 = ifelse(PrProdidxSOh62 >= 1.2, 1, NA),
-           SOh62_110 = ifelse(PrProdidxSOh62 >= 1.1, 1, NA),
-           SOh62_100 = ifelse(PrProdidxSOh62 >= 1.0, 1, NA),
-           SOh62_less = ifelse(PrProdidxSOh62 < 1, 1, NA),
-           SOh64_120 = ifelse(PrProdidxSOh64 >= 1.2, 1, NA),
-           SOh64_110 = ifelse(PrProdidxSOh64 >= 1.1, 1, NA),
-           SOh64_100 = ifelse(PrProdidxSOh64 >= 1.0, 1, NA),
-           SOh64_less = ifelse(PrProdidxSOh64 < 1, 1, NA),
-           SOh66_120 = ifelse(PrProdidxSOh66 >= 1.2, 1, NA),
-           SOh66_110 = ifelse(PrProdidxSOh66 >= 1.1, 1, NA),
-           SOh66_100 = ifelse(PrProdidxSOh66 >= 1.0, 1, NA),
-           SOh66_less = ifelse(PrProdidxSOh66 < 1, 1, NA),
-           SOhs60_120 = ifelse(PrProdidxSOhs60 >= 1.2, 1, NA),
-           SOhs60_110 = ifelse(PrProdidxSOhs60 >= 1.1, 1, NA),
-           SOhs60_100 = ifelse(PrProdidxSOhs60 >= 1.0, 1, NA),
-           SOhs60_less = ifelse(PrProdidxSOhs60 < 1, 1, NA),
-           SOhs62_120 = ifelse(PrProdidxSOhs62 >= 1.2, 1, NA),
-           SOhs62_110 = ifelse(PrProdidxSOhs62 >= 1.1, 1, NA),
-           SOhs62_100 = ifelse(PrProdidxSOhs62 >= 1.0, 1, NA),
-           SOhs62_less = ifelse(PrProdidxSOhs62 < 1, 1, NA),
-           SOhs64_120 = ifelse(PrProdidxSOhs64 >= 1.2, 1, NA),
-           SOhs64_110 = ifelse(PrProdidxSOhs64 >= 1.1, 1, NA),
-           SOhs64_100 = ifelse(PrProdidxSOhs64 >= 1.0, 1, NA),
-           SOhs64_less = ifelse(PrProdidxSOhs64 < 1, 1, NA),
-           SOhs66_120 = ifelse(PrProdidxSOhs66 >= 1.2, 1, NA),
-           SOhs66_110 = ifelse(PrProdidxSOhs66 >= 1.1, 1, NA),
-           SOhs66_100 = ifelse(PrProdidxSOhs66 >= 1.0, 1, NA),
-           SOhs66_less = ifelse(PrProdidxSOhs66 < 1, 1, NA))
+  dfP <- dfP[,c("GridID","CenterLat","CenterLong",
+                "PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
+                "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
+                "refSurvivalSOh60","refSurvivalSOh62","refSurvivalSOh64","refSurvivalSOh66",
+                "refSurvivalSOhs60","refSurvivalSOhs62","refSurvivalSOhs64", "refSurvivalSOhs66")] %>% 
+    mutate(SOh60_120 = ifelse(PrProdidxSOh60 >= 1.2 & refSurvivalSOh60 >= 0.5, 1, NA),
+           SOh60_110 = ifelse(PrProdidxSOh60 >= 1.1 & refSurvivalSOh60 >= 0.5, 1, NA),
+           SOh60_100 = ifelse(PrProdidxSOh60 >= 1.0 & refSurvivalSOh60 >= 0.5, 1, NA),
+           SOh60_less = ifelse(PrProdidxSOh60 < 1 & refSurvivalSOh60 >= 0.5, 1, NA),
+           SOh62_120 = ifelse(PrProdidxSOh62 >= 1.2 & refSurvivalSOh62 >= 0.5, 1, NA),
+           SOh62_110 = ifelse(PrProdidxSOh62 >= 1.1 & refSurvivalSOh62 >= 0.5, 1, NA),
+           SOh62_100 = ifelse(PrProdidxSOh62 >= 1.0 & refSurvivalSOh62 >= 0.5, 1, NA),
+           SOh62_less = ifelse(PrProdidxSOh62 < 1 & refSurvivalSOh62 >= 0.5, 1, NA),
+           SOh64_120 = ifelse(PrProdidxSOh64 >= 1.2 & refSurvivalSOh64 >= 0.5, 1, NA),
+           SOh64_110 = ifelse(PrProdidxSOh64 >= 1.1 & refSurvivalSOh64 >= 0.5, 1, NA),
+           SOh64_100 = ifelse(PrProdidxSOh64 >= 1.0 & refSurvivalSOh64 >= 0.5, 1, NA),
+           SOh64_less = ifelse(PrProdidxSOh64 < 1 & refSurvivalSOh64 >= 0.5, 1, NA),
+           SOh66_120 = ifelse(PrProdidxSOh66 >= 1.2 & refSurvivalSOh66 >= 0.5, 1, NA),
+           SOh66_110 = ifelse(PrProdidxSOh66 >= 1.1 & refSurvivalSOh66, 1, NA),
+           SOh66_100 = ifelse(PrProdidxSOh66 >= 1.0 & refSurvivalSOh66, 1, NA),
+           SOh66_less = ifelse(PrProdidxSOh66 < 1 & refSurvivalSOh66, 1, NA),
+           SOhs60_120 = ifelse(PrProdidxSOhs60 >= 1.2 & refSurvivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_110 = ifelse(PrProdidxSOhs60 >= 1.1 & refSurvivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_100 = ifelse(PrProdidxSOhs60 >= 1.0 & refSurvivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_less = ifelse(PrProdidxSOhs60 < 1 & refSurvivalSOhs60 >= 0.5, 1, NA),
+           SOhs62_120 = ifelse(PrProdidxSOhs62 >= 1.2 & refSurvivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_110 = ifelse(PrProdidxSOhs62 >= 1.1 & refSurvivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_100 = ifelse(PrProdidxSOhs62 >= 1.0 & refSurvivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_less = ifelse(PrProdidxSOhs62 < 1 & refSurvivalSOhs62 >= 0.5, 1, NA),
+           SOhs64_120 = ifelse(PrProdidxSOhs64 >= 1.2 & refSurvivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_110 = ifelse(PrProdidxSOhs64 >= 1.1 & refSurvivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_100 = ifelse(PrProdidxSOhs64 >= 1.0 & refSurvivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_less = ifelse(PrProdidxSOhs64 < 1 & refSurvivalSOhs64 >= 0.5, 1, NA),
+           SOhs66_120 = ifelse(PrProdidxSOhs66 >= 1.2 & refSurvivalSOhs66 >= 0.5, 1, NA),
+           SOhs66_110 = ifelse(PrProdidxSOhs66 >= 1.1 & refSurvivalSOhs66, 1, NA),
+           SOhs66_100 = ifelse(PrProdidxSOhs66 >= 1.0 & refSurvivalSOhs66, 1, NA),
+           SOhs66_less = ifelse(PrProdidxSOhs66 < 1 & refSurvivalSOhs66, 1, NA))
   
   dfP <- dfP[,c(1:3,12:43)]
   
@@ -200,7 +163,7 @@ for (f in files){
 files2 <-  list.files(dirOut,pattern = "*.csv",full.names = T)
 files2 <- grep("SO_choice",files2, value=TRUE)
 
-lstRCP <- c("45in50","85in50","45in70","85in70")
+lstRCP <- c("45in50","85in50")
 
 for (rcp in lstRCP){
   
@@ -208,7 +171,7 @@ for (rcp in lstRCP){
   files3 <- grep(rcp,files2, value=TRUE)
   
   rcp.name <- ifelse(grepl("45",rcp),"RCP4.5","RCP8.5")
-  period <- ifelse(grepl("50",rcp), "2050", "2070")
+  period <- "2050"
   
   for(f in files3){
     
