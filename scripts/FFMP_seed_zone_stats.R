@@ -825,6 +825,61 @@ ggplot()+
 dev.off()
 
 
+### percentage beyond limits ---------------------------------------------------
+
+dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N','SO 1.5gS 60°N',
+                                                                               'SO 1.5g 62°N','SO 1.5gS 62°N',
+                                                                               'SO 1.5g 64°N','SO 1.5gS 64°N',
+                                                                               'SO 1.5g 66°N','SO 1.5gS 66°N'))
+
+dfPerc <- dfMaster %>%
+  group_by(RCP,period,seed.zone,seed.orchard, .drop=FALSE) %>% 
+  summarise(n_GCMs = n(),
+            meanPerc = mean(limitsPerc, na.rm=TRUE),
+            GCMag = sum(limitsPerc >= 50, na.rm = TRUE)/n_GCMs*100,
+            .groups = "keep") %>% 
+  mutate(meanPerc = meanPerc/100,
+         percOK = 1 - meanPerc,
+         GCMag = GCMag/100,
+         GCMdiss = 1 - GCMag)
+
+mooncolor <- "grey"
+moonfill <- "white"
+highlightmoon <- "#457b9d"
+
+dfPerc2 <- dfPerc %>%
+  filter(GCMag == 1)
+
+library(gggibbous)
+library(hrbrthemes)
+
+dfPerc %>% 
+  filter(RCP=="4.5" & period == "2041-2060") %>% 
+  ggplot(aes(x = seed.zone, y = seed.orchard)) +
+  geom_moon(aes(ratio = meanPerc), 
+            fill = mooncolor, 
+            colour = mooncolor) +
+  geom_moon(aes(ratio = percOK),
+            fill = moonfill,
+            right = FALSE,
+            colour = mooncolor) +
+  geom_moon(data = dfPerc2, aes(ratio = meanPerc), 
+            fill = highlightmoon, 
+            colour = highlightmoon) +
+  geom_moon(data = dfPerc2, aes(ratio = percOK), 
+            fill = NA, 
+            right = FALSE, 
+            colour = highlightmoon) +
+  #facet_wrap(~seed.zone)+
+  ylab("Seed orchard") +
+  xlab("Seed zone") +
+  labs(title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
+       subtitle = "Blue crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone")+#,
+       #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback") +
+  hrbrthemes::theme_ipsum_rc() 
+
+  
+
 ### old figs -------------------------------------------------------------------
 
 #brewer.pal(n = 8, name = "Dark2")
