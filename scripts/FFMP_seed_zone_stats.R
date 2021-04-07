@@ -261,11 +261,12 @@ for (f in files){
 
 ### read in summaries ----------------------------------------------------------
 
-df_results_summary <- vroom(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh5.csv"))
+df_results_summary <- read.csv(paste0(dirOut, "PrProdIdx_seed_zone_summaries_Sweden_GDD5thresh5.csv"))
+
 head(df_results_summary)
 summary(df_results_summary)
-#colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","mean","scenario")
-colnames(df_results_summary) <- c("seed.zone","seed.orchard","ncells","prodidxMean","survMean","perc120","perc110","perc100","percLess","percSurv","limitsPerc","scenario")
+colnames(df_results_summary) <- c("row","seed.zone","seed.orchard","ncells","prodidxMean","survMean","perc120","perc110","perc100","percLess","percSurv","limitsPerc","scenario")
+#colnames(df_results_summary) <- c("seed.zone","seed.orchard","ncells","prodidxMean","survMean","perc120","perc110","perc100","percLess","percSurv","limitsPerc","scenario")
 
 dfMaster <- df_results_summary
 dfMaster$GCM <- ifelse(grepl("bc", dfMaster$scenario), 'bc - BCC-CSM1-1',
@@ -290,11 +291,10 @@ dfMaster$seed.orchard <- ifelse(grepl("SOh60", dfMaster$seed.orchard), 'SO 1.5g 
 
 ### process reference period separately ----------------------------------------
 
-dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+dfRef <- read.csv(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
 names(dfRef)
 
 # apply thresholds
-# not survival?
 # lat long transfer
 dfRef$PrProdidxSOh60[which(dfRef$CenterLat > 65 | dfRef$CenterLat < 55)] <- NA
 dfRef$PrProdidxSOh62[which(dfRef$CenterLat > 67 | dfRef$CenterLat < 57)] <- NA
@@ -330,8 +330,8 @@ dfRef_sf$seed.zone <- factor(dfRef_sf$seed.zone, ordered = T, levels = zoneOrder
 dfRef_sf <- dfRef_sf %>% group_by(seed.zone) %>% mutate(count = n())
 
 dfRef <- dfRef_sf[,c("PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
-                             "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
-                             "seed.zone","count")] %>% 
+                     "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
+                     "seed.zone","count")] %>% 
   filter(!is.na(seed.zone)) %>% # filter to just zones
   st_drop_geometry() %>% 
   pivot_longer(1:8, names_to="seed.orchard",values_to="prod_idx")
@@ -379,14 +379,14 @@ dfRef$seed.orchard <- ifelse(grepl("SOh60", dfRef$seed.orchard), 'SO 1.5g 60°N'
                                                                 ifelse(grepl("SOh66", dfRef$seed.orchard), 'SO 1.5g 66°N',
                                                                        ifelse(grepl("SOhs66", dfRef$seed.orchard), 'SO 1.5gS 66°N', NA))))))))
 
-dfRef$seed.orchard <- factor(dfRef$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
-                                                                         'SO 1.5gS 60°N',
-                                                                         'SO 1.5g 62°N',
-                                                                         'SO 1.5gS 62°N',
-                                                                         'SO 1.5g 64°N',
-                                                                         'SO 1.5gS 64°N',
-                                                                         'SO 1.5g 66°N',
-                                                                         'SO 1.5gS 66°N'))
+# dfRef$seed.orchard <- factor(dfRef$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+#                                                                          'SO 1.5gS 60°N',
+#                                                                          'SO 1.5g 62°N',
+#                                                                          'SO 1.5gS 62°N',
+#                                                                          'SO 1.5g 64°N',
+#                                                                          'SO 1.5gS 64°N',
+#                                                                          'SO 1.5g 66°N',
+#                                                                          'SO 1.5gS 66°N'))
 dfRef$scenario <- "Baseline"
 dfRef$GCM <- NA
 dfRef$RCP <- NA
@@ -651,12 +651,12 @@ dfRef$period <- "1971-2017"
 
 ### combined FFMP version ------------------------------------------------------
 
-#dfMaster <- rbind(dfRef,dfMaster)
+dfMaster2 <- rbind(dfRef,dfMaster[,-1])
 
-dfMaster$GCM <- factor(dfMaster$GCM)
-dfMaster$RCP <- factor(dfMaster$RCP)
-dfMaster$seed.zone <- factor(dfMaster$seed.zone, ordered=T, levels = zoneOrder)
-dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+dfMaster2$GCM <- factor(dfMaster2$GCM)
+dfMaster2$RCP <- factor(dfMaster2$RCP)
+dfMaster2$seed.zone <- factor(dfMaster2$seed.zone, ordered=T, levels = zoneOrder)
+dfMaster2$seed.orchard <- factor(dfMaster2$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
                                                                                'SO 1.5gS 60°N',
                                                                                'SO 1.5g 62°N',
                                                                                'SO 1.5gS 62°N',
@@ -664,14 +664,15 @@ dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('
                                                                                'SO 1.5gS 64°N',
                                                                                'SO 1.5g 66°N',
                                                                                'SO 1.5gS 66°N'))
-head(dfMaster)
-summary(dfMaster)
+head(dfMaster2)
+summary(dfMaster2)
 
-dfFFMP <- dfMaster %>%
+dfFFMP <- dfMaster2 %>%
   #filter(period!="1971-2017") %>% 
   group_by(RCP,period,seed.zone,seed.orchard, .drop=FALSE) %>% 
   summarise(n_GCMs = n(),
             meanPr = mean(prodidxMean, na.rm=TRUE),
+            meanSurv = mean(survMean, na.rm = TRUE),
             # above120 = sum(perc120 >=33 & percSurv <=66, na.rm=TRUE),
             # above110 = sum(perc110 >=33 & percSurv <=66, na.rm=TRUE),
             # above100 = sum(perc100 >=33 & percSurv <=66, na.rm=TRUE),
@@ -720,42 +721,33 @@ for (i in c(1:nrow(dfFFMP))){
     }
   }
   
+  if (is.na(dfFFMP$pathway[i])){
+    
+    if(is.na(dfFFMP$meanPr[i])){
+      dfFFMP$pathway[i] <- "Beyond model limits"
+      
+    }
+  
+  }
 }
 
-  
-dfRef$pathway <- NA
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&is.na(dfFFMP$meanPr))] <- "Beyond model limits"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv<50)] <- "Expiry (poor survival)"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr < 100)] <- "Expiry (below local)"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 100)] <- "Good performance (above local)"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 110)] <- "Very good performance (above 110%)"
+dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 120)] <- "Excellent performance (above 120%)"
 
-dfRef$pathway[which(dfRef$prodidxMean<100)] <-"Expiry (below local)"
-dfRef$pathway[which(dfRef$prodidxMean>=100)] <-"Good performance (above local)"
-dfRef$pathway[which(dfRef$prodidxMean>=110)] <-"Very good performance (above 110%)"
-dfRef$pathway[which(dfRef$prodidxMean>=120)] <-"Excellent performance (above 120%)"
-dfRef$pathway[which(dfRef$limitsPerc>=50)] <-"Beyond model limits"
-
-summary(dfRef)
-unique(dfRef$pathway)
-
-dfRef$seed.orchard <- as.character(dfRef$seed.orchard)
-dfFFMP$seed.orchard <- as.character(dfFFMP$seed.orchard)
-
-dfFFMP <- rbind(dfRef[,c("seed.zone","seed.orchard","period","RCP","pathway")], dfFFMP[,c("seed.zone","seed.orchard","period","RCP","pathway")])
-
-# dfFFMP$seed.orchard <- factor(dfFFMP$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
-#                                                                            'SO 1.5gS 60°N',
-#                                                                            'SO 1.5g 62°N',
-#                                                                            'SO 1.5gS 62°N',
-#                                                                            'SO 1.5g 64°N',
-#                                                                            'SO 1.5gS 64°N',
-#                                                                            'SO 1.5g 66°N',
-#                                                                            'SO 1.5gS 66°N'))
-
+   
 dfFFMP$pathway <- factor(dfFFMP$pathway, ordered = T,
                               levels = c("Excellent performance (above 120)",
                                          "Very good performance (above 110)",
                                          "Good performance (above local)",
                                          "Expiry (below local)",
+                                         "Expiry (poor survival)",
                                          "Beyond model limits"))
 
-#png(paste0(wd,"/figures/SO_FFMP_RCP4.5.png"), width = 600, height = 850)
+png(paste0(wd,"/figures/SO_FFMP_RCP4.5.png"), width = 600, height = 850)
 dfFFMP %>% 
   filter(RCP == "4.5" | is.na(RCP)) %>% 
   ggplot()+
@@ -765,6 +757,7 @@ dfFFMP %>%
                                "Very good performance (above 110)",
                                "Good performance (above local)",
                                "Expiry (below local)",
+                               "Expiry (poor survival)",
                                "Beyond model limits"))+
   coord_flip()+
   facet_wrap(~seed.zone, ncol = 2)+
@@ -779,8 +772,12 @@ png(paste0(wd,"/figures/SO_FFMP_RCP8.5.png"), width = 600, height = 850)
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=pathway))+
   scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
-                     labels = c("Excellent performance (above 120)","Very good performance (above 110)",
-                                "Good performance (above local)","Expiry (below local)","Beyond model thresholds"))+
+                     labels = c("Excellent performance (above 120)",
+                                "Very good performance (above 110)",
+                                "Good performance (above local)",
+                                "Expiry (below local)",
+                                "Expiry (poor survival)",
+                                "Beyond model thresholds"))+
   coord_flip()+
   facet_wrap(~seed.zone, ncol = 2)+
   theme_bw()+
@@ -795,34 +792,80 @@ dfFFMP$seed.zone <- factor(dfFFMP$seed.zone,ordered = T, levels=zoneOrder)
 sfFFMPs <- left_join(sfSeedZones,dfFFMP,by="seed.zone")
 
 # plot 4.5
-png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 800, height = 1000)
-ggplot()+
+png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 300, height = 1000)
+(s1 <- ggplot()+
   geom_sf(data = sweden, fill=NA)+
   geom_sf(data = sfFFMPs %>% filter(RCP == "4.5" | is.na(RCP)), aes(fill=pathway), colour=0)+
   scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
-                     labels = c("Excellent performance (above 120)","Very good performance (above 110)",
-                                "Good performance (above local)","Expiry (below local)","Beyond model thresholds"))+
+                     labels = c("Excellent performance (above 120)",
+                                "Very good performance (above 110)",
+                                "Good performance (above local)",
+                                "Expiry (below local)",
+                                "Expiry (poor survival)",
+                                "Beyond model thresholds"))+
   facet_grid(seed.orchard~period)+
   theme_bw()+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())+
-  labs(fill = "Performance")
+    ggtitle("RCP4.5")+
+    theme(plot.title = element_text(face="bold",size=30),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none"))#+#labs(fill = "Performance"))
 dev.off()
 
 # plot 8.5
-png(paste0(wd,"/figures/SO_FFMP_RCP8.5_spatial.png"), width = 800, height = 1000)
-ggplot()+
-  geom_sf(data = sweden, fill=NA)+
-  geom_sf(data = sfFFMPs %>% filter(RCP == "8.5" | is.na(RCP)), aes(fill=pathway), colour=0)+
-  scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
-                     labels = c("Excellent performance (above 120)","Very good performance (above 110)",
-                                "Good performance (above local)","Expiry (below local)","Beyond model thresholds"))+
-  facet_grid(seed.orchard~period)+
-  theme_bw()+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())+
-  labs(fill = "Performance")
+png(paste0(wd,"/figures/SO_FFMP_RCP8.5_spatial.png"), width = 300, height = 1000)
+(s2 <- ggplot()+
+    geom_sf(data = sweden, fill=NA)+
+    geom_sf(data = sfFFMPs %>% filter(RCP == "8.5" | is.na(RCP)), aes(fill=pathway), colour=0)+
+    scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
+                     labels = c("Excellent performance (above 120)",
+                                "Very good performance (above 110)",
+                                "Good performance (above local)",
+                                "Expiry (below local)",
+                                "Expiry (poor survival)",
+                                "Beyond model thresholds"))+
+    facet_grid(seed.orchard~period)+
+    theme_bw()+
+    ggtitle("RCP8.5")+
+    theme(plot.title = element_text(face="bold",size=30),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none"))#+#labs(fill = "Performance"))
 dev.off()
+
+# extract legend
+#library(ggpubr)
+
+# Extract the legend. Returns a gtable
+#legend <- get_legend(s1)
+
+# Convert to a ggplot and save
+#legend <- as_ggplot(legend)
+#plot(legend)
+#ggsave(legend, file=paste0(dirFigs,"FFMP_legend.png"),width=3, height=6, dpi=300)
+
+
+# combine side by side
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- c("C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/SO_FFMP_RCP4.5_spatial.png",
+              "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/SO_FFMP_RCP8.5_spatial.png",
+              "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/FFMP_legend.png" )
+
+r1 <- lapply(lstPlots, png::readPNG)
+g1 <- lapply(r1, grid::rasterGrob)
+(arr1 <- gridExtra::grid.arrange(grobs=g1, 
+                                ncol=3,
+                                layout_matrix = cbind(c(1),
+                                                      c(2),
+                                                      c(3))))
+ggsave(arr1, 
+       file=paste0(dirFigs,"Spatial_FFMPs.png"),
+       width=24, 
+       height=30, 
+       dpi=300)
 
 
 ### percentage beyond limits ---------------------------------------------------
@@ -845,7 +888,7 @@ dfPerc <- dfMaster %>%
 
 mooncolor <- "grey"
 moonfill <- "white"
-highlightmoon <- "#457b9d"
+highlightmoon <- "#EA7F83"
 
 dfPerc2 <- dfPerc %>%
   filter(GCMag == 1)
@@ -853,7 +896,7 @@ dfPerc2 <- dfPerc %>%
 library(gggibbous)
 library(hrbrthemes)
 
-dfPerc %>% 
+p1 <- dfPerc %>% 
   filter(RCP=="4.5" & period == "2041-2060") %>% 
   ggplot(aes(x = seed.zone, y = seed.orchard)) +
   geom_moon(aes(ratio = meanPerc), 
@@ -873,12 +916,14 @@ dfPerc %>%
   #facet_wrap(~seed.zone)+
   ylab("Seed orchard") +
   xlab("Seed zone") +
-  labs(title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
-       subtitle = "Blue crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone")+#,
+  #labs(title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
+       #subtitle = "Red crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone")+#,
        #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback") +
   hrbrthemes::theme_ipsum_rc() 
 
-  
+png(paste0(dirFigs,"ModelLimitMoons.png"), width = 10, height = 7, units = "in", res = 200)
+p1
+dev.off() 
 
 ### old figs -------------------------------------------------------------------
 
