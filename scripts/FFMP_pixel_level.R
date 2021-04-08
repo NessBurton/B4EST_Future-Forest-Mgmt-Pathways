@@ -318,6 +318,17 @@ for (rcp in lstRCP2){
     period <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,4)
     seed.orchard <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,1)
     
+    SO.name <- ifelse(grepl("SOh60", seed.orchard), 'SO 1.5g 60°N', 
+                      ifelse(grepl("SOhs60", seed.orchard), 'SO 1.5gS 60°N',
+                             ifelse(grepl("SOh62", seed.orchard), 'SO 1.5g 62°N',
+                                    ifelse(grepl("SOhs62", seed.orchard), 'SO 1.5gS 62°N',
+                                           ifelse(grepl("SOh64", seed.orchard), 'SO 1.5g 64°N',
+                                                  ifelse(grepl("SOhs64", seed.orchard), 'SO 1.5gS 64°N',
+                                                         ifelse(grepl("SOh66", seed.orchard), 'SO 1.5g 66°N',
+                                                                ifelse(grepl("SOhs66", seed.orchard), 'SO 1.5gS 66°N', NA))))))))
+    
+    rcp.name <- substr(rcp, 1,6)
+    
     rst <- raster(i)
     
     # Convert raster to dataframe
@@ -361,12 +372,12 @@ for (rcp in lstRCP2){
                                       ""))+
         #labs(fill="Performance")+
         theme_bw()+
-        ggtitle(seed.orchard)+
-        xlab("Longitude")+ylab("Latitude")+
+        ggtitle(paste0(SO.name, " | ", rcp.name))+
+        #xlab("Longitude")+ylab("Latitude")+
         coord_sf(ylim=lat.lim)+
-        theme(plot.title = element_text(face="bold",size=20),
-              axis.title = element_text(size=16,face="bold"),
-              axis.text = element_text(size = 14),
+        theme(plot.title = element_text(face="bold",size=24),
+              axis.title = element_blank(),#element_text(size=18,face="bold"),
+              axis.text = element_text(size = 16),
               #axis.ticks = element_blank(),
               #legend.title = element_text(size = 16, face = "bold", vjust = 3),
               #legend.text = element_text(size = 14)))
@@ -402,10 +413,7 @@ library(gridExtra)
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("ixel", lstPlots, value=TRUE)
 
-#
-lstPlots_RCP45 <- grep("4.5", lstPlots, value=TRUE)
-
-lst1 <- grep("Oh6", lstPlots_RCP45, value=TRUE)
+lst1 <- grep("Oh6", lstPlots, value=TRUE)
 lst1 <- append(lst1, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r1 <- lapply(lst1, png::readPNG)
@@ -416,12 +424,12 @@ ggsave(gridExtra::grid.arrange(grobs=g1,
                                layout_matrix = cbind(c(1,3,5,7),
                                                      c(2,4,6,8),
                                                      c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_H_pathways_RCP4.5.png"),
+       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways.png"),
        width=24, 
        height=40, 
        dpi=300)
 
-lst2 <- grep("Ohs6", lstPlots_RCP45, value=TRUE)
+lst2 <- grep("Ohs6", lstPlots, value=TRUE)
 lst2 <- append(lst2, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r2 <- lapply(lst2, png::readPNG)
@@ -432,7 +440,7 @@ ggsave(gridExtra::grid.arrange(grobs=g2,
                                layout_matrix = cbind(c(1,3,5,7),
                                                      c(2,4,6,8),
                                                      c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_HS_pathways_RCP4.5.png"),
+       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways.png"),
        width=24, 
        height=40, 
        dpi=300)
