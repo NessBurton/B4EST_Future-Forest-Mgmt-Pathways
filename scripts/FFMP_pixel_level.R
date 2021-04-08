@@ -61,7 +61,7 @@ scenario_list <- c()
 
 for (f in files){
   
-  #f <- files[1]
+  f <- files[1]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
@@ -200,9 +200,14 @@ for (rcp in lstRCP){
   }
   
   #head(bc45in50)
+  if (rcp.name == "RCP4.5"){
+    df <- cbind(bc45in50[,c(1,2,3,4,5,6)],he45in50$he45in50_ag, mg45in50$mg45in50_ag, mi45in50$mi45in50_ag, no45in50$no45in50_ag)
+    colnames(df)[7:10] <- c("he45in50_ag","mg45in50_ag","mi45in50_ag","no45in50_ag")
+  }else{
+    df <- cbind(bc85in50[,c(1,2,3,4,5,6)],he85in50$he85in50_ag, mg85in50$mg85in50_ag, mi85in50$mi85in50_ag, no85in50$no85in50_ag)
+    colnames(df)[7:10] <- c("he85in50_ag","mg85in50_ag","mi85in50_ag","no85in50_ag")
+  }
   
-  df <- cbind(bc45in50[,c(1,2,3,4,5,6)],he45in50$he45in50_ag, mg45in50$mg45in50_ag, mi45in50$mi45in50_ag, no45in50$no45in50_ag)
-  colnames(df)[7:10] <- c("he45in50_ag","mg45in50_ag","mi45in50_ag","no45in50_ag")
   
   head(df)
   
