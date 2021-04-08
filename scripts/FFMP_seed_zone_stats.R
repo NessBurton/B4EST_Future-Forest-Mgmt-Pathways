@@ -1028,7 +1028,9 @@ highlightmoon2 <- "#FDE725FF"
     facet_grid(RCP~period)+
     ylab("Seed orchard") +
     xlab("Seed zone") +
-    theme_bw())#+
+    theme_bw())
+    #hrbrthemes::theme_ipsum_rc()) 
+
 #labs(#title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
 #subtitle = "Red crescents indicate where all 5 GCMs agree that model limits are exceeded in over 50% of the seed zone"))
 #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
