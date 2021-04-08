@@ -994,9 +994,12 @@ dfPerc2a <- dfPerc %>%
     facet_grid(RCP~period)+
     ylab("Seed orchard") +
     xlab("Seed zone") +
-    theme_bw())
+    theme_bw()+
+    theme(axis.text = element_text(size=14),
+          axis.title = element_text(size = 18, face = "bold"),
+          strip.text = element_text(size = 18, face = "bold")))
 
-png(paste0(dirFigs,"ModelLimitMoons_facet.png"), width = 20, height = 14, units = "in", res = 300)
+png(paste0(dirFigs,"ModelLimitMoons_facet.png"), width = 22, height = 14, units = "in", res = 300)
 p1a
 dev.off()
 
@@ -1028,7 +1031,10 @@ highlightmoon2 <- "#FDE725FF"
     facet_grid(RCP~period)+
     ylab("Seed orchard") +
     xlab("Seed zone") +
-    theme_bw())
+    theme_bw()+
+    theme(axis.text = element_text(size=14),
+          axis.title = element_text(size = 18, face = "bold"),
+          strip.text = element_text(size = 18, face = "bold")))
     #hrbrthemes::theme_ipsum_rc()) 
 
 #labs(#title = "Model limits are exceeded over larger areas in southerly seed zones, and in northern seed zones for southern seed orchards",
@@ -1036,9 +1042,11 @@ highlightmoon2 <- "#FDE725FF"
 #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
 #hrbrthemes::theme_ipsum_rc()) 
 
-png(paste0(dirFigs,"Threshold120Moons_facet.png"), width = 20, height = 14, units = "in", res = 300)
+png(paste0(dirFigs,"Threshold120Moons_facet.png"), width = 22, height = 14, units = "in", res = 300)
 p2a
 dev.off()
+
+
 
 ### old figs -------------------------------------------------------------------
 
