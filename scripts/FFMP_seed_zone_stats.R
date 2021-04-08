@@ -1034,7 +1034,7 @@ highlightmoon2 <- "#FDE725FF"
 #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
 #hrbrthemes::theme_ipsum_rc()) 
 
-png(paste0(dirFigs,"Threshold120Moons_facet.png"), width = 10, height = 7, units = "in", res = 200)
+png(paste0(dirFigs,"Threshold120Moons_facet.png"), width = 20, height = 14, units = "in", res = 300)
 p2a
 dev.off()
 
