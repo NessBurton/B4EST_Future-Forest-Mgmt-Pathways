@@ -881,12 +881,14 @@ dfPerc <- dfMaster2 %>%
             limits.true = mean(limitsPerc, na.rm=TRUE),
             limits.gcm = sum(limitsPerc >= 50, na.rm = TRUE)/n_GCMs*100,
             true.120 = mean(perc120, na.rm=TRUE),
+            gcm.120 = sum(perc120 >= 50, na.rm = TRUE)/n_GCMs*100,
             .groups = "keep") %>% 
   mutate(limits.true = limits.true/100,
          limits.false = 1 - limits.true,
          limits.gcm = limits.gcm/100,
          true.120 = true.120/100,
-         false.120 = 1 - true.120)
+         false.120 = 1 - true.120,
+         gcm.120 = gcm.120/100)
 
 dfPerc$true.120[which(is.na(dfPerc$true.120))]<-0
 dfPerc$false.120[which(is.na(dfPerc$false.120))]<-0
@@ -896,6 +898,7 @@ moonfill <- "white"
 highlightmoon <- "#EA7F83"
 
 dfPerc2 <- dfPerc %>%
+  filter(RCP=="4.5" & period == "2041-2060") %>% 
   filter(limits.gcm == 1)
 
 library(gggibbous)
@@ -928,24 +931,30 @@ p1
 dev.off()
 
 
+dfPerc3 <- dfPerc %>%
+  filter(RCP=="4.5" & period == "2041-2060") %>% 
+  filter(gcm.120 >= 0.6)
+
+highlightmoon2 <- "#FDE725FF"
+
 # 120 area
 (p2 <- dfPerc %>% 
     filter(RCP=="4.5" & period == "2041-2060") %>% 
     ggplot(aes(x = seed.zone, y = seed.orchard)) +
-    geom_moon(aes(ratio = limits.true), 
+    geom_moon(aes(ratio = true.120), 
               fill = mooncolor, 
               colour = mooncolor) +
-    geom_moon(aes(ratio = limits.false),
+    geom_moon(aes(ratio = false.120),
               fill = moonfill,
               right = FALSE,
               colour = mooncolor) +
-    geom_moon(data = dfPerc2, aes(ratio = limits.true), 
-              fill = highlightmoon, 
-              colour = highlightmoon) +
-    geom_moon(data = dfPerc2, aes(ratio = limits.false), 
+    geom_moon(data = dfPerc3, aes(ratio = true.120), 
+              fill = highlightmoon2, 
+              colour = highlightmoon2) +
+    geom_moon(data = dfPerc3, aes(ratio = false.120), 
               fill = NA, 
               right = FALSE, 
-              colour = highlightmoon) +
+              colour = highlightmoon2) +
     #facet_wrap(~seed.zone)+
     ylab("Seed orchard") +
     xlab("Seed zone") +
@@ -955,7 +964,7 @@ dev.off()
 #caption = "Plot: Vanessa Burton (@vee_burton) - Data: Henrik Hallingback")) #+
 #hrbrthemes::theme_ipsum_rc()) 
 
-png(paste0(dirFigs,"ModelLimitMoons.png"), width = 10, height = 7, units = "in", res = 200)
+png(paste0(dirFigs,"Threshold120Moons.png"), width = 10, height = 7, units = "in", res = 200)
 p1
 dev.off()
 
