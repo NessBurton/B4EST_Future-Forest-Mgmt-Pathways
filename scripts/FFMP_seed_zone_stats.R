@@ -140,7 +140,6 @@ for (f in files){
   dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   
-  # where to apply survival limits?
   # for survival, threshold for 2050 should use baseline period survival
   if (grepl("50", scenario)==TRUE){
 
