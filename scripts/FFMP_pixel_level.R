@@ -427,7 +427,7 @@ lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("ixel", lstPlots, value=TRUE)
 
 lst1 <- grep("Oh6", lstPlots, value=TRUE)
-lst1 <- grep("2050", lstPlots, value=TRUE)
+lst1 <- grep("2050_2050", lst1, value=TRUE)
 lst1 <- append(lst1, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r1 <- lapply(lst1, png::readPNG)
@@ -444,7 +444,7 @@ ggsave(gridExtra::grid.arrange(grobs=g1,
        dpi=300)
 
 lst2 <- grep("Ohs6", lstPlots, value=TRUE)
-lst2 <- grep("2050", lstPlots, value=TRUE)
+lst2 <- grep("2050_2050", lst2, value=TRUE)
 lst2 <- append(lst2, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r2 <- lapply(lst2, png::readPNG)
@@ -456,6 +456,42 @@ ggsave(gridExtra::grid.arrange(grobs=g2,
                                                      c(2,4,6,8),
                                                      c(9,9,9,9))), 
        file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2050.png"),
+       width=24, 
+       height=40, 
+       dpi=300)
+
+
+lst3 <- grep("Oh6", lstPlots, value=TRUE)
+lst3 <- grep("2070_2070", lst3, value=TRUE)
+lst3 <- append(lst3, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
+
+r3 <- lapply(lst3, png::readPNG)
+g3 <- lapply(r3, grid::rasterGrob)
+
+ggsave(gridExtra::grid.arrange(grobs=g3, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,3,5,7),
+                                                     c(2,4,6,8),
+                                                     c(9,9,9,9))), 
+       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways_2070.png"),
+       width=24, 
+       height=40, 
+       dpi=300)
+
+
+lst4 <- grep("Ohs6", lstPlots, value=TRUE)
+lst4 <- grep("2070_2070", lst4, value=TRUE)
+lst4 <- append(lst4, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
+
+r4 <- lapply(lst4, png::readPNG)
+g4 <- lapply(r4, grid::rasterGrob)
+
+ggsave(gridExtra::grid.arrange(grobs=g4, 
+                               ncol=3,
+                               layout_matrix = cbind(c(1,3,5,7),
+                                                     c(2,4,6,8),
+                                                     c(9,9,9,9))), 
+       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2070.png"),
        width=24, 
        height=40, 
        dpi=300)
