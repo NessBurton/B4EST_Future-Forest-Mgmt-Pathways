@@ -61,11 +61,14 @@ scenario_list <- c()
 
 for (f in files){
   
-  #f <- files[1]
+  f <- files[2]
   
   scenario <- strsplit(f, "[_]")[[1]][1]
   scenario <- strsplit(scenario, "[/]")[[1]][8]
   GCM <- substr(scenario,1,6)
+  period <- ifelse(grepl("50",scenario),"2050","2070")
+  
+  print(paste0("Processing for GCM: ", GCM, " | For period: ", period))
   
   scenario_list[[length(scenario_list) + 1]] <- scenario
   
@@ -93,80 +96,92 @@ for (f in files){
   dfP$PrProdidxSOhs64[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   dfP$PrProdidxSOhs66[which(dfP$GDD5Future < 527 | dfP$GDD5Future > 1349)] <- NA
   
-  print("Read in reference survival")
-  
   # for survival, threshold for 2050 should use baseline period survival
-  dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
-  names(dfRef)
-  dfP$refSurvivalSOh60 <- dfRef$PrSurvSOh60
-  dfP$refSurvivalSOh62 <- dfRef$PrSurvSOh62
-  dfP$refSurvivalSOh64 <- dfRef$PrSurvSOh64
-  dfP$refSurvivalSOh66 <- dfRef$PrSurvSOh66
-  dfP$refSurvivalSOhs60 <- dfRef$PrSurvSOhs60
-  dfP$refSurvivalSOhs62 <- dfRef$PrSurvSOhs62
-  dfP$refSurvivalSOhs64 <- dfRef$PrSurvSOhs64
-  dfP$refSurvivalSOhs66 <- dfRef$PrSurvSOhs66
+  if (period == 2050){
+    dfRef <- vroom(paste0(dirData, "Productionpredictions/Refclimate_SO1.5g_predictions.csv"))
+    print("Read in reference survival")
+    dfP$survivalSOh60 <- dfRef$PrSurvSOh60
+    dfP$survivalSOh62 <- dfRef$PrSurvSOh62
+    dfP$survivalSOh64 <- dfRef$PrSurvSOh64
+    dfP$survivalSOh66 <- dfRef$PrSurvSOh66
+    dfP$survivalSOhs60 <- dfRef$PrSurvSOhs60
+    dfP$survivalSOhs62 <- dfRef$PrSurvSOhs62
+    dfP$survivalSOhs64 <- dfRef$PrSurvSOhs64
+    dfP$survivalSOhs66 <- dfRef$PrSurvSOhs66
+  } else if (period == 2070){
+    print("Read 2050 survival")
+    df2050 <- vroom(paste0(dirData, "Productionpredictions/",GCM,"50_SO1.5g_predictions.csv"))
+    dfP$survivalSOh60 <- df2050$PrSurvSOh60
+    dfP$survivalSOh62 <- df2050$PrSurvSOh62
+    dfP$survivalSOh64 <- df2050$PrSurvSOh64
+    dfP$survivalSOh66 <- df2050$PrSurvSOh66
+    dfP$survivalSOhs60 <- df2050$PrSurvSOhs60
+    dfP$survivalSOhs62 <- df2050$PrSurvSOhs62
+    dfP$survivalSOhs64 <- df2050$PrSurvSOhs64
+    dfP$survivalSOhs66 <- df2050$PrSurvSOhs66
+  }
   
+  print("Calculate agreement between GCMs")
   # new var - pathway
   dfP <- dfP[,c("GridID","CenterLat","CenterLong",
                 "PrProdidxSOh60","PrProdidxSOh62","PrProdidxSOh64","PrProdidxSOh66",
                 "PrProdidxSOhs60","PrProdidxSOhs62","PrProdidxSOhs64","PrProdidxSOhs66",
-                "refSurvivalSOh60","refSurvivalSOh62","refSurvivalSOh64","refSurvivalSOh66",
-                "refSurvivalSOhs60","refSurvivalSOhs62","refSurvivalSOhs64", "refSurvivalSOhs66")] %>% 
-    mutate(SOh60_120 = ifelse(PrProdidxSOh60 >= 1.2 & refSurvivalSOh60 >= 0.5, 1, NA),
-           SOh60_110 = ifelse(PrProdidxSOh60 >= 1.1 & refSurvivalSOh60 >= 0.5, 1, NA),
-           SOh60_100 = ifelse(PrProdidxSOh60 >= 1.0 & refSurvivalSOh60 >= 0.5, 1, NA),
+                "survivalSOh60","survivalSOh62","survivalSOh64","survivalSOh66",
+                "survivalSOhs60","survivalSOhs62","survivalSOhs64", "survivalSOhs66")] %>% 
+    mutate(SOh60_120 = ifelse(PrProdidxSOh60 >= 1.2 & survivalSOh60 >= 0.5, 1, NA),
+           SOh60_110 = ifelse(PrProdidxSOh60 >= 1.1 & survivalSOh60 >= 0.5, 1, NA),
+           SOh60_100 = ifelse(PrProdidxSOh60 >= 1.0 & survivalSOh60 >= 0.5, 1, NA),
            SOh60_expIP = ifelse(PrProdidxSOh60 < 1, 1, NA),
-           SOh60_expLS = ifelse(refSurvivalSOh60 <0.5, 1, NA),
+           SOh60_expLS = ifelse(survivalSOh60 <0.5, 1, NA),
            SOh60_lim = ifelse(is.na(PrProdidxSOh60),1,NA),
            #
-           SOh62_120 = ifelse(PrProdidxSOh62 >= 1.2 & refSurvivalSOh62 >= 0.5, 1, NA),
-           SOh62_110 = ifelse(PrProdidxSOh62 >= 1.1 & refSurvivalSOh62 >= 0.5, 1, NA),
-           SOh62_100 = ifelse(PrProdidxSOh62 >= 1.0 & refSurvivalSOh62 >= 0.5, 1, NA),
+           SOh62_120 = ifelse(PrProdidxSOh62 >= 1.2 & survivalSOh62 >= 0.5, 1, NA),
+           SOh62_110 = ifelse(PrProdidxSOh62 >= 1.1 & survivalSOh62 >= 0.5, 1, NA),
+           SOh62_100 = ifelse(PrProdidxSOh62 >= 1.0 & survivalSOh62 >= 0.5, 1, NA),
            SOh62_expIP = ifelse(PrProdidxSOh62 < 1, 1, NA),
-           SOh62_expLS = ifelse(refSurvivalSOh62 <0.5, 1, NA),
+           SOh62_expLS = ifelse(survivalSOh62 <0.5, 1, NA),
            SOh62_lim = ifelse(is.na(PrProdidxSOh62),1,NA),
            #
-           SOh64_120 = ifelse(PrProdidxSOh64 >= 1.2 & refSurvivalSOh64 >= 0.5, 1, NA),
-           SOh64_110 = ifelse(PrProdidxSOh64 >= 1.1 & refSurvivalSOh64 >= 0.5, 1, NA),
-           SOh64_100 = ifelse(PrProdidxSOh64 >= 1.0 & refSurvivalSOh64 >= 0.5, 1, NA),
+           SOh64_120 = ifelse(PrProdidxSOh64 >= 1.2 & survivalSOh64 >= 0.5, 1, NA),
+           SOh64_110 = ifelse(PrProdidxSOh64 >= 1.1 & survivalSOh64 >= 0.5, 1, NA),
+           SOh64_100 = ifelse(PrProdidxSOh64 >= 1.0 & survivalSOh64 >= 0.5, 1, NA),
            SOh64_expIP = ifelse(PrProdidxSOh64 < 1, 1, NA),
-           SOh64_expLS = ifelse(refSurvivalSOh64 <0.5, 1, NA),
+           SOh64_expLS = ifelse(survivalSOh64 <0.5, 1, NA),
            SOh64_lim = ifelse(is.na(PrProdidxSOh64),1,NA),
            #
-           SOh66_120 = ifelse(PrProdidxSOh66 >= 1.2 & refSurvivalSOh66 >= 0.5, 1, NA),
-           SOh66_110 = ifelse(PrProdidxSOh66 >= 1.1 & refSurvivalSOh66, 1, NA),
-           SOh66_100 = ifelse(PrProdidxSOh66 >= 1.0 & refSurvivalSOh66, 1, NA),
+           SOh66_120 = ifelse(PrProdidxSOh66 >= 1.2 & survivalSOh66 >= 0.5, 1, NA),
+           SOh66_110 = ifelse(PrProdidxSOh66 >= 1.1 & survivalSOh66, 1, NA),
+           SOh66_100 = ifelse(PrProdidxSOh66 >= 1.0 & survivalSOh66, 1, NA),
            SOh66_expIP = ifelse(PrProdidxSOh66 < 1, 1, NA),
-           SOh66_expLS = ifelse(refSurvivalSOh66 <0.5, 1, NA),
+           SOh66_expLS = ifelse(survivalSOh66 <0.5, 1, NA),
            SOh66_lim = ifelse(is.na(PrProdidxSOh66),1,NA),
            #
-           SOhs60_120 = ifelse(PrProdidxSOhs60 >= 1.2 & refSurvivalSOhs60 >= 0.5, 1, NA),
-           SOhs60_110 = ifelse(PrProdidxSOhs60 >= 1.1 & refSurvivalSOhs60 >= 0.5, 1, NA),
-           SOhs60_100 = ifelse(PrProdidxSOhs60 >= 1.0 & refSurvivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_120 = ifelse(PrProdidxSOhs60 >= 1.2 & survivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_110 = ifelse(PrProdidxSOhs60 >= 1.1 & survivalSOhs60 >= 0.5, 1, NA),
+           SOhs60_100 = ifelse(PrProdidxSOhs60 >= 1.0 & survivalSOhs60 >= 0.5, 1, NA),
            SOhs60_expIP = ifelse(PrProdidxSOhs60 < 1, 1, NA),
-           SOhs60_expLS = ifelse(refSurvivalSOhs60 <0.5, 1, NA),
+           SOhs60_expLS = ifelse(survivalSOhs60 <0.5, 1, NA),
            SOhs60_lim = ifelse(is.na(PrProdidxSOhs60),1,NA),
            #
-           SOhs62_120 = ifelse(PrProdidxSOhs62 >= 1.2 & refSurvivalSOhs62 >= 0.5, 1, NA),
-           SOhs62_110 = ifelse(PrProdidxSOhs62 >= 1.1 & refSurvivalSOhs62 >= 0.5, 1, NA),
-           SOhs62_100 = ifelse(PrProdidxSOhs62 >= 1.0 & refSurvivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_120 = ifelse(PrProdidxSOhs62 >= 1.2 & survivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_110 = ifelse(PrProdidxSOhs62 >= 1.1 & survivalSOhs62 >= 0.5, 1, NA),
+           SOhs62_100 = ifelse(PrProdidxSOhs62 >= 1.0 & survivalSOhs62 >= 0.5, 1, NA),
            SOhs62_expIP = ifelse(PrProdidxSOhs62 < 1, 1, NA),
-           SOhs62_expLS = ifelse(refSurvivalSOhs62 <0.5, 1, NA),
+           SOhs62_expLS = ifelse(survivalSOhs62 <0.5, 1, NA),
            SOhs62_lim = ifelse(is.na(PrProdidxSOhs62),1,NA),
            #
-           SOhs64_120 = ifelse(PrProdidxSOhs64 >= 1.2 & refSurvivalSOhs64 >= 0.5, 1, NA),
-           SOhs64_110 = ifelse(PrProdidxSOhs64 >= 1.1 & refSurvivalSOhs64 >= 0.5, 1, NA),
-           SOhs64_100 = ifelse(PrProdidxSOhs64 >= 1.0 & refSurvivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_120 = ifelse(PrProdidxSOhs64 >= 1.2 & survivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_110 = ifelse(PrProdidxSOhs64 >= 1.1 & survivalSOhs64 >= 0.5, 1, NA),
+           SOhs64_100 = ifelse(PrProdidxSOhs64 >= 1.0 & survivalSOhs64 >= 0.5, 1, NA),
            SOhs64_expIP = ifelse(PrProdidxSOhs64 < 1, 1, NA),
-           SOhs64_expLS = ifelse(refSurvivalSOhs64 <0.5, 1, NA),
+           SOhs64_expLS = ifelse(survivalSOhs64 <0.5, 1, NA),
            SOhs64_lim = ifelse(is.na(PrProdidxSOhs64),1,NA),
            #
-           SOhs66_120 = ifelse(PrProdidxSOhs66 >= 1.2 & refSurvivalSOhs66 >= 0.5, 1, NA),
-           SOhs66_110 = ifelse(PrProdidxSOhs66 >= 1.1 & refSurvivalSOhs66, 1, NA),
-           SOhs66_100 = ifelse(PrProdidxSOhs66 >= 1.0 & refSurvivalSOhs66, 1, NA),
+           SOhs66_120 = ifelse(PrProdidxSOhs66 >= 1.2 & survivalSOhs66 >= 0.5, 1, NA),
+           SOhs66_110 = ifelse(PrProdidxSOhs66 >= 1.1 & survivalSOhs66, 1, NA),
+           SOhs66_100 = ifelse(PrProdidxSOhs66 >= 1.0 & survivalSOhs66, 1, NA),
            SOhs66_expIP = ifelse(PrProdidxSOhs66 < 1, 1, NA),
-           SOhs66_expLS = ifelse(refSurvivalSOhs66 <0.5, 1, NA),
+           SOhs66_expLS = ifelse(survivalSOhs66 <0.5, 1, NA),
            SOhs66_lim = ifelse(is.na(PrProdidxSOhs66),1,NA))
   
   dfP <- dfP[,c(1:3,20:67)]
@@ -181,6 +196,12 @@ for (f in files){
   
   }
 
+# check survival implemented differently for 2050 and 2070
+
+check50 <- vroom(paste0(dirOut,"SO_choice_per_pixel_no85in50.csv"))
+check70 <- vroom(paste0(dirOut,"SO_choice_per_pixel_no85in70.csv"))
+
+summary(check50);summary(check70)
 
 ### list new files & merge -----------------------------------------------------  
 
@@ -318,13 +339,13 @@ lstRCP2 <- c("RCP4.5_2050","RCP8.5_2050","RCP4.5_2070","RCP8.5_2070")
 
 for (rcp in lstRCP2){
   
-  #rcp <- lstRCP2[1]
+  rcp <- lstRCP2[3]
   
   RCP_rsts <- grep(rcp,lstRsts,value=TRUE)
   
   for (i in RCP_rsts){
     
-    #i <- RCP_rsts[4]
+    i <- RCP_rsts[4]
     
     seed.orchard <- stringr::str_split(i,"/") %>% map_chr(.,4)
     period <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,4)
