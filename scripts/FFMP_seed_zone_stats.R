@@ -813,6 +813,11 @@ dev.off()
 #dfFFMP2$seed.zone <- factor(dfFFMP2$seed.zone,ordered = T, levels=zoneOrder)
 sfFFMPs <- left_join(sfSeedZones,dfFFMP2,by="seed.zone")
 
+sfFFMPs$seed.orchard <- factor(sfFFMPs$seed.orchard, ordered = TRUE, levels = c('SO 1.5g 66°N','SO 1.5gS 66°N',
+                                                                                'SO 1.5g 64°N','SO 1.5gS 64°N',
+                                                                                'SO 1.5g 62°N','SO 1.5gS 62°N',
+                                                                                'SO 1.5g 60°N','SO 1.5gS 60°N'))
+
 # plot 4.5
 png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 300, height = 1000)
 (s1 <- ggplot()+
