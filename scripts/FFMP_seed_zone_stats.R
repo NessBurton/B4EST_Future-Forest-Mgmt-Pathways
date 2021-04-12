@@ -391,7 +391,12 @@ dfRef$GCM <- NA
 dfRef$RCP <- NA
 dfRef$period <- "1971-2017"
 
-
+dfRef_FFMP <- dfRef %>% mutate(pathway = ifelse(limitsPerc >=50, "Beyond model limits",
+                                                ifelse(prodidxMean <100, "Expiry (below local)",
+                                                       ifelse(survMean <50, "Expiry (low survival)",
+                                                              ifelse(prodidxMean >=120, "Excellent performance (above 120)",
+                                                                     ifelse(prodidxMean >=110, "Very good performance (above 110)",
+                                                                            ifelse(prodidxMean >= 100, "Good performance (above local)",NA)))))))
 
 
 ### RCP4.5 - agreement above 120 & 110% production index -----------------------
@@ -650,23 +655,23 @@ dfRef$period <- "1971-2017"
 
 ### combined FFMP version ------------------------------------------------------
 
-dfMaster2 <- rbind(dfRef,dfMaster[,-1])
+#dfMaster2 <- rbind(dfRef,dfMaster[,-1])
 
-dfMaster2$GCM <- factor(dfMaster2$GCM)
-dfMaster2$RCP <- factor(dfMaster2$RCP)
-dfMaster2$seed.zone <- factor(dfMaster2$seed.zone, ordered=T, levels = zoneOrder)
-dfMaster2$seed.orchard <- factor(dfMaster2$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
-                                                                               'SO 1.5gS 60°N',
-                                                                               'SO 1.5g 62°N',
-                                                                               'SO 1.5gS 62°N',
-                                                                               'SO 1.5g 64°N',
-                                                                               'SO 1.5gS 64°N',
-                                                                               'SO 1.5g 66°N',
-                                                                               'SO 1.5gS 66°N'))
-head(dfMaster2)
-summary(dfMaster2)
+# dfMaster$GCM <- factor(dfMaster$GCM)
+# dfMaster$RCP <- factor(dfMaster$RCP)
+# dfMaster$seed.zone <- factor(dfMaster$seed.zone, ordered=T, levels = zoneOrder)
+# dfMaster$seed.orchard <- factor(dfMaster$seed.orchard, ordered = T, levels = c('SO 1.5g 60°N',
+#                                                                                'SO 1.5gS 60°N',
+#                                                                                'SO 1.5g 62°N',
+#                                                                                'SO 1.5gS 62°N',
+#                                                                                'SO 1.5g 64°N',
+#                                                                                'SO 1.5gS 64°N',
+#                                                                                'SO 1.5g 66°N',
+#                                                                                'SO 1.5gS 66°N'))
+# head(dfMaster)
+# summary(dfMaster)
 
-dfFFMP <- dfMaster2 %>%
+dfFFMP <- dfMaster %>%
   #filter(period!="1971-2017") %>% 
   group_by(RCP,period,seed.zone,seed.orchard, .drop=FALSE) %>% 
   summarise(n_GCMs = n(),
@@ -684,82 +689,97 @@ dfFFMP <- dfMaster2 %>%
             beyondLims = sum(limitsPerc >= 50, na.rm = TRUE),
             .groups = "keep")
 
-dfFFMP$pathway <- NA
 
-for (i in c(1:nrow(dfFFMP))){
-  
-  if (dfFFMP$beyondLims[i] >= 3) {
-    dfFFMP$pathway[i]<-"Beyond model limits"
-  }
-  
-  if (is.na(dfFFMP$pathway[i])){
-    if (dfFFMP$less100[i] >= 3) {
-      dfFFMP$pathway[i]<-"Expiry (below local)"
-    }
-  }
-  
-  if (is.na(dfFFMP$pathway[i])){
-    if (dfFFMP$above100[i] >= 3) {
-      dfFFMP$pathway[i]<-"Good performance (above local)"
-    }
-  } 
-    
-  if (dfFFMP$above110[i] >= 3) {
-    dfFFMP$pathway[i]<-"Very good performance (above 110)"
-  }
-    
-  if (dfFFMP$above120[i] >= 3) {
-    dfFFMP$pathway[i]<-"Excellent performance (above 120)"
-  }  
-  
-  if (is.na(dfFFMP$pathway[i])){
-    if (dfFFMP$meanPr[i] < 100) {
-      dfFFMP$pathway[i]<-"Expiry (below local)"
-    }
-    if (dfFFMP$meanPr[i] > 100) {
-      dfFFMP$pathway[i]<-"Good performance (above local)"
-    }
-  }
-  
-  if (is.na(dfFFMP$pathway[i])){
-    
-    if(is.na(dfFFMP$meanPr[i])){
-      dfFFMP$pathway[i] <- "Beyond model limits"
-      
-    }
-  
-  }
-}
+dfFFMP <- dfFFMP %>% mutate(pathway = ifelse(beyondLims >=3, "Beyond model limits",
+                                             ifelse(meanPr <100, "Expiry (below local)",
+                                                    ifelse(meanSurv <50, "Expiry (low survival)",
+                                                           ifelse(meanPr >=120, "Excellent performance (above 120)",
+                                                                  ifelse(meanPr >=110, "Very good performance (above 110)",
+                                                                         ifelse(meanPr >= 100, "Good performance (above local)",NA)))))))
 
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&is.na(dfFFMP$meanPr))] <- "Beyond model limits"
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$survLims>=3)] <- "Expiry (poor survival)"
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv<50)] <- "Expiry (poor survival)"
+# dfFFMP$pathway <- NA
+# 
+# for (i in c(1:nrow(dfFFMP))){
+#   
+#   if (dfFFMP$beyondLims[i] >= 3) {
+#     dfFFMP$pathway[i]<-"Beyond model limits"
+#   }
+#   
+#   if (is.na(dfFFMP$pathway[i])){
+#     if (dfFFMP$less100[i] >= 3) {
+#       dfFFMP$pathway[i]<-"Expiry (below local)"
+#     }
+#   }
+#   
+#   if (is.na(dfFFMP$pathway[i])){
+#     if (dfFFMP$above100[i] >= 3) {
+#       dfFFMP$pathway[i]<-"Good performance (above local)"
+#     }
+#   } 
+#     
+#   if (dfFFMP$above110[i] >= 3) {
+#     dfFFMP$pathway[i]<-"Very good performance (above 110)"
+#   }
+#     
+#   if (dfFFMP$above120[i] >= 3) {
+#     dfFFMP$pathway[i]<-"Excellent performance (above 120)"
+#   }  
+#   
+#   if (is.na(dfFFMP$pathway[i])){
+#     if (dfFFMP$meanPr[i] < 100) {
+#       dfFFMP$pathway[i]<-"Expiry (below local)"
+#     }
+#     if (dfFFMP$meanPr[i] > 100) {
+#       dfFFMP$pathway[i]<-"Good performance (above local)"
+#     }
+#   }
+#   
+#   if (is.na(dfFFMP$pathway[i])){
+#     
+#     if(is.na(dfFFMP$meanPr[i])){
+#       dfFFMP$pathway[i] <- "Beyond model limits"
+#       
+#     }
+#   
+#   }
+# }
+# 
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&is.na(dfFFMP$meanPr))] <- "Beyond model limits"
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$survLims>=3)] <- "Expiry (poor survival)"
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv<50)] <- "Expiry (poor survival)"
+# 
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr < 100)] <- "Expiry (below local)"
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 100)] <- "Good performance (above local)"
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 110)] <- "Very good performance (above 110%)"
+# dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 120)] <- "Excellent performance (above 120%)"
 
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr < 100)] <- "Expiry (below local)"
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 100)] <- "Good performance (above local)"
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 110)] <- "Very good performance (above 110%)"
-dfFFMP$pathway[which(is.na(dfFFMP$pathway)&dfFFMP$meanSurv >=50 & dfFFMP$meanPr >= 120)] <- "Excellent performance (above 120%)"
 
+# merge reference and future predictions
+refFFMP <- dfRef_FFMP[,c(1:2,14:16)]
+futFFMP <- dfFFMP[,c(3:4,1,2,14)]
+
+dfFFMP2 <- rbind(refFFMP,futFFMP)
    
-dfFFMP$pathway <- factor(dfFFMP$pathway, ordered = T,
+dfFFMP2$pathway <- factor(dfFFMP2$pathway, ordered = T,
                               levels = c("Excellent performance (above 120)",
                                          "Very good performance (above 110)",
                                          "Good performance (above local)",
                                          "Expiry (below local)",
-                                         "Expiry (poor survival)",
+                                         "Expiry (low survival)",
                                          "Beyond model limits"))
+dfFFMP2$seed.zone <- factor(dfFFMP2$seed.zone, ordered=T, levels = zoneOrder)
 
 png(paste0(wd,"/figures/SO_FFMP_RCP4.5.png"), width = 600, height = 850)
-dfFFMP %>% 
+dfFFMP2 %>% 
   filter(RCP == "4.5" | is.na(RCP)) %>% 
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=pathway))+
-  scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
+  scale_fill_viridis(discrete=T, direction=-1, #na.value = "grey60",
                     labels = c("Excellent performance (above 120)",
                                "Very good performance (above 110)",
                                "Good performance (above local)",
                                "Expiry (below local)",
-                               "Expiry (poor survival)",
+                               "Expiry (low survival)",
                                "Beyond model limits"))+
   coord_flip()+
   facet_wrap(~seed.zone, ncol = 2)+
@@ -769,16 +789,16 @@ dfFFMP %>%
 dev.off()
 
 png(paste0(wd,"/figures/SO_FFMP_RCP8.5.png"), width = 600, height = 850)
-(dfFFMP %>% 
+(dfFFMP2 %>% 
   filter(RCP == "8.5" | is.na(RCP)) %>% 
   ggplot()+
   geom_tile(aes(seed.orchard,period, fill=pathway))+
-  scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
+  scale_fill_viridis(discrete=T, direction=-1, #na.value = "grey60",
                      labels = c("Excellent performance (above 120)",
                                 "Very good performance (above 110)",
                                 "Good performance (above local)",
                                 "Expiry (below local)",
-                                "Expiry (poor survival)",
+                                "Expiry (low survival)",
                                 "Beyond model limits"))+
   coord_flip()+
   facet_wrap(~seed.zone, ncol = 2)+
@@ -790,20 +810,20 @@ dev.off()
 
 ### join back & plot spatially ###
 
-dfFFMP$seed.zone <- factor(dfFFMP$seed.zone,ordered = T, levels=zoneOrder)
-sfFFMPs <- left_join(sfSeedZones,dfFFMP,by="seed.zone")
+#dfFFMP2$seed.zone <- factor(dfFFMP2$seed.zone,ordered = T, levels=zoneOrder)
+sfFFMPs <- left_join(sfSeedZones,dfFFMP2,by="seed.zone")
 
 # plot 4.5
 png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 300, height = 1000)
 (s1 <- ggplot()+
   geom_sf(data = sweden, fill=NA)+
   geom_sf(data = sfFFMPs %>% filter(RCP == "4.5" | is.na(RCP)), aes(fill=pathway), colour=0)+
-  scale_fill_viridis(discrete=T, direction=-1, na.value = "grey60",
+  scale_fill_viridis(discrete=T, direction=-1, #na.value = "grey60",
                      labels = c("Excellent performance (above 120)",
                                 "Very good performance (above 110)",
                                 "Good performance (above local)",
                                 "Expiry (below local)",
-                                "Expiry (poor survival)",
+                                "Expiry (low survival)",
                                 "Beyond model limits"))+
   facet_grid(seed.orchard~period)+
   theme_bw()+
@@ -812,7 +832,7 @@ png(paste0(wd,"/figures/SO_FFMP_RCP4.5_spatial.png"), width = 300, height = 1000
           axis.text.x = element_blank(),
           axis.ticks.x = element_blank(),#)+
           legend.position = "none"))#,
-          #labs(fill = "Performance"))
+    #labs(fill = "Performance"))
 dev.off()
 
 # plot 8.5
@@ -825,7 +845,7 @@ png(paste0(wd,"/figures/SO_FFMP_RCP8.5_spatial.png"), width = 300, height = 1000
                                 "Very good performance (above 110)",
                                 "Good performance (above local)",
                                 "Expiry (below local)",
-                                "Expiry (poor survival)",
+                                "Expiry (low survival)",
                                 "Beyond model thresholds"))+
     facet_grid(seed.orchard~period)+
     theme_bw()+
