@@ -392,8 +392,8 @@ dfRef$RCP <- NA
 dfRef$period <- "1971-2017"
 
 dfRef_FFMP <- dfRef %>% mutate(pathway = ifelse(limitsPerc >=50, "Beyond model limits",
-                                                ifelse(prodidxMean <100, "Expiry (below local)",
-                                                       ifelse(survMean <50, "Expiry (low survival)",
+                                                ifelse(survMean <50, "Expiry (low survival)",
+                                                       ifelse(prodidxMean <100, "Expiry (below local)",
                                                               ifelse(prodidxMean >=120, "Excellent performance (above 120)",
                                                                      ifelse(prodidxMean >=110, "Very good performance (above 110)",
                                                                             ifelse(prodidxMean >= 100, "Good performance (above local)",NA)))))))
@@ -691,8 +691,8 @@ dfFFMP <- dfMaster %>%
 
 
 dfFFMP <- dfFFMP %>% mutate(pathway = ifelse(beyondLims >=3, "Beyond model limits",
-                                             ifelse(meanPr <100, "Expiry (below local)",
-                                                    ifelse(meanSurv <50, "Expiry (low survival)",
+                                             ifelse(meanSurv <50, "Expiry (low survival)",
+                                                    ifelse(meanPr <100, "Expiry (below local)",
                                                            ifelse(meanPr >=120, "Excellent performance (above 120)",
                                                                   ifelse(meanPr >=110, "Very good performance (above 110)",
                                                                          ifelse(meanPr >= 100, "Good performance (above local)",NA)))))))
