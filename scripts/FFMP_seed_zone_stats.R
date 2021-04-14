@@ -768,10 +768,10 @@ dfFFMP2$pathway <- factor(dfFFMP2$pathway, ordered = T,
                                          "Expiry (low survival)",
                                          "Beyond model limits"))
 dfFFMP2$seed.zone <- factor(dfFFMP2$seed.zone, ordered=T, levels = zoneOrder)
-dfFFMP2$seed.orchard <- factor(dfFFMP2$seed.orchard, ordered=T, levels = c('SO 1.5g 60°N','SO 1.5gS 60°N',
-                                                                           'SO 1.5g 62°N','SO 1.5gS 62°N',
-                                                                           'SO 1.5g 64°N','SO 1.5gS 64°N',
-                                                                           'SO 1.5g 66°N','SO 1.5gS 66°N'))
+dfFFMP2$seed.orchard <- factor(dfFFMP2$seed.orchard, ordered=T, levels = c('SO 1.5gS 60°N','SO 1.5g 60°N',
+                                                                           'SO 1.5gS 62°N','SO 1.5g 62°N',
+                                                                           'SO 1.5gS 64°N','SO 1.5g 64°N',
+                                                                           'SO 1.5gS 66°N','SO 1.5g 66°N'))
 
 png(paste0(wd,"/figures/SO_FFMP_RCP4.5.png"), width = 600, height = 850)
 dfFFMP2 %>% 
