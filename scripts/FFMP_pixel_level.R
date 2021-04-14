@@ -208,8 +208,8 @@ summary(check50);summary(check70)
 files2 <-  list.files(dirOut,pattern = "*.csv",full.names = T)
 files2 <- grep("SO_choice",files2, value=TRUE)
 
-#lstRCP <- c("45in50","85in50","45in70","85in70")
-lstRCP <- c("85in50","45in70","85in70")
+lstRCP <- c("45in50","85in50","45in70","85in70")
+#lstRCP <- c("85in50","45in70","85in70")
 
 for (rcp in lstRCP){
   
@@ -257,59 +257,71 @@ for (rcp in lstRCP){
   head(df)
   
   dfPathway <- df %>% mutate(SOh60_pathway = ifelse(SOh60_lim >=3, 1,
-                                                    ifelse(SOh60_expIP >=3, 2,
-                                                           ifelse(SOh60_expLS >=3, 3,
+                                                    ifelse(SOh60_expLS >=3, 3,
+                                                           ifelse(SOh60_expIP >=3, 2,
                                                                   ifelse(SOh60_120 >=3, 6,
                                                                          ifelse(SOh60_110 >=3, 5,
                                                                                 ifelse(SOh60_100 >= 3, 4,NA)))))),
                              SOh62_pathway = ifelse(SOh62_lim >=3, 1,
-                                                    ifelse(SOh62_expIP >=3, 2,
-                                                           ifelse(SOh62_expLS >=3, 3,
+                                                    ifelse(SOh62_expLS >=3, 3,
+                                                           ifelse(SOh62_expIP >=3, 2,
                                                                   ifelse(SOh62_120 >=3, 6,
                                                                          ifelse(SOh62_110 >=3, 5,
                                                                                 ifelse(SOh62_100 >= 3, 4,NA)))))),
                              SOh64_pathway = ifelse(SOh64_lim >=3, 1,
-                                                    ifelse(SOh64_expIP >=3, 2,
-                                                           ifelse(SOh64_expLS >=3, 3,
+                                                    ifelse(SOh64_expLS >=3, 3,
+                                                           ifelse(SOh64_expIP >=3, 2,
                                                                   ifelse(SOh64_120 >=3, 6,
                                                                          ifelse(SOh64_110 >=3, 5,
                                                                                 ifelse(SOh64_100 >= 3, 4,NA)))))),
                              SOh66_pathway = ifelse(SOh66_lim >=3, 1,
-                                                    ifelse(SOh66_expIP >=3, 2,
-                                                           ifelse(SOh66_expLS >=3, 3,
+                                                    ifelse(SOh66_expLS >=3, 3,
+                                                           ifelse(SOh66_expIP >=3, 2,
                                                                   ifelse(SOh66_120 >=3, 6,
                                                                          ifelse(SOh66_110 >=3, 5,
                                                                                 ifelse(SOh66_100 >= 3, 4,NA)))))),
                              SOhs60_pathway = ifelse(SOhs60_lim >=3, 1,
-                                                     ifelse(SOhs60_expIP >=3, 2,
-                                                            ifelse(SOhs60_expLS >=3, 3,
+                                                     ifelse(SOhs60_expLS >=3, 3,
+                                                            ifelse(SOhs60_expIP >=3, 2,
                                                                    ifelse(SOhs60_120 >=3, 6,
                                                                           ifelse(SOhs60_110 >=3, 5,
                                                                                  ifelse(SOhs60_100 >= 3, 4,NA)))))),
                              SOhs62_pathway = ifelse(SOhs62_lim >=3, 1,
-                                                     ifelse(SOhs62_expIP >=3, 2,
-                                                            ifelse(SOhs62_expLS >=3, 3,
+                                                     ifelse(SOhs62_expLS >=3, 3,
+                                                            ifelse(SOhs62_expIP >=3, 2,
                                                                    ifelse(SOhs62_120 >=3, 6,
                                                                           ifelse(SOhs62_110 >=3, 5,
                                                                                  ifelse(SOhs62_100 >= 3, 4,NA)))))),
                              SOhs64_pathway = ifelse(SOhs64_lim >=3, 1,
-                                                     ifelse(SOhs64_expIP >=3, 2,
-                                                            ifelse(SOhs64_expLS >=3, 3,
+                                                     ifelse(SOhs64_expLS >=3, 3,
+                                                            ifelse(SOhs64_expIP >=3, 2,
                                                                    ifelse(SOhs64_120 >=3, 6,
                                                                           ifelse(SOhs64_110 >=3, 5,
                                                                                  ifelse(SOhs64_100 >= 3, 4,NA)))))),
                              SOhs66_pathway = ifelse(SOhs66_lim >=3, 1,
-                                                     ifelse(SOhs66_expIP >=3, 2,
-                                                            ifelse(SOhs66_expLS >=3, 3,
+                                                     ifelse(SOhs66_expLS >=3, 3,
+                                                            ifelse(SOhs66_expIP >=3, 2,
                                                                    ifelse(SOhs66_120 >=3, 6,
                                                                           ifelse(SOhs66_110 >=3, 5,
-                                                                                 ifelse(SOhs66_100 >= 3, 4,NA)))))))
+                                                                                 ifelse(SOhs66_100 >= 3, 4,NA)))))))#,
+                             # NA_check = ifelse(SOhs66_lim < 3 & 
+                             #                     SOhs66_expIP < 3 & 
+                             #                     SOhs66_expLS < 3 &
+                             #                     SOhs66_120 < 3 &
+                             #                     SOhs66_110 < 3 &
+                             #                     SOhs66_100 < 3, 9999, NA))
   
   colnames(dfPathway)
   rm(df)
   
   dfPathway <- dfPathway[,c("GridID","CenterLat","CenterLong",
-                            "SOh60_pathway","SOh62_pathway","SOh64_pathway","SOh66_pathway","SOhs60_pathway","SOhs62_pathway","SOhs64_pathway","SOhs66_pathway")]
+                            "SOh60_pathway","SOh62_pathway","SOh64_pathway","SOh66_pathway",
+                            "SOhs60_pathway","SOhs62_pathway","SOhs64_pathway","SOhs66_pathway")]#,"NA_check")]
+  
+  # head(dfPathway)
+  # check <- dfPathway %>% 
+  #   dplyr::select(SOhs66_lim,SOhs66_expIP,SOhs66_expLS,SOhs66_120,SOhs66_110,SOhs66_100,SOhs66_pathway,NA_check) %>%  
+  #   dplyr::filter(NA_check == 9999)
   
   coordinates(dfPathway) <- ~ CenterLong + CenterLat
   
@@ -402,14 +414,14 @@ for (rcp in lstRCP2){
     (p1 <- ggplot(data = dfPathway) +
         geom_sf(data = sweden, fill=NA, col=NA)+
         geom_tile(data = dfPathway, mapping = aes(x = x, y = y, fill = pathway), size = 1) +
-        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, 
+        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, #na.value = "grey60", 
                            labels = c("Excellent performance (above 120)",
                                       "Very good performance (above 110)",
                                       "Good performance (above local)",
                                       "Expiry (below local)",
                                       "Expiry (low survival)",
                                       "Beyond model limits",
-                                      ""))+
+                                      "No GCM majority"))+
         #labs(fill="Performance")+
         theme_bw()+
         ggtitle(paste0(SO.name, " | ", rcp.name))+
@@ -420,8 +432,9 @@ for (rcp in lstRCP2){
               axis.text = element_text(size = 16),
               #axis.ticks = element_blank(),
               #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-              #legend.text = element_text(size = 14)))
+              #legend.text = element_text(size = 14))+
               legend.position = "none"))
+        #guides(fill = guide_legend(override.aes = list(color = "grey40"))))
     
     ggsave(p1, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,"_",rcp,"_",period,".png"), width=8, height=10, dpi=300)
     
