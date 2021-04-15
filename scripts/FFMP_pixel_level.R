@@ -353,96 +353,176 @@ for (rcp in lstRCP){
 
 lstRsts <- list.files(paste0(dirOut,"pathway_rst"),full.names = T)
 
-lstRCP2 <- c("RCP4.5_2050","RCP8.5_2050","RCP4.5_2070","RCP8.5_2070")
+#lstRCP2 <- c("RCP4.5_2050","RCP8.5_2050","RCP4.5_2070","RCP8.5_2070")
+lstYrs <- c("2050","2070")
+lstSOs <- c("SOh60","SOh62","SOh64","SOh66",
+            "SOhs60","SOhs62","SOhs64","SOhs66")
 
-for (rcp in lstRCP2){
+for (yr in lstYrs){
+#for (rcp in lstRCP2){
   
   #rcp <- lstRCP2[3]
+  #RCP_rsts <- grep(rcp,lstRsts,value=TRUE)
+  #yr <- lstYrs[1]
+  yrRSTs <- grep(yr, lstRsts, value = TRUE)
   
-  RCP_rsts <- grep(rcp,lstRsts,value=TRUE)
-  
-  for (i in RCP_rsts){
+  #for (i in RCP_rsts){
+  for (SO in lstSOs){  
     
     #i <- RCP_rsts[4]
+    #SO <- lstSOs[1]
     
-    seed.orchard <- stringr::str_split(i,"/") %>% map_chr(.,4)
-    period <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,4)
-    seed.orchard <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,1)
+    soRST <- grep(SO, yrRSTs, value = TRUE)
     
-    SO.name <- ifelse(grepl("SOh60", seed.orchard), 'SO 1.5g 60°N', 
-                      ifelse(grepl("SOhs60", seed.orchard), 'SO 1.5gS 60°N',
-                             ifelse(grepl("SOh62", seed.orchard), 'SO 1.5g 62°N',
-                                    ifelse(grepl("SOhs62", seed.orchard), 'SO 1.5gS 62°N',
-                                           ifelse(grepl("SOh64", seed.orchard), 'SO 1.5g 64°N',
-                                                  ifelse(grepl("SOhs64", seed.orchard), 'SO 1.5gS 64°N',
-                                                         ifelse(grepl("SOh66", seed.orchard), 'SO 1.5g 66°N',
-                                                                ifelse(grepl("SOhs66", seed.orchard), 'SO 1.5gS 66°N', NA))))))))
+    #dfSO <- tibble()
     
-    rcp.name <- substr(rcp, 1,6)
-    period <- substr(rcp, 8,11)
+    for (i in soRST){
+      
+      #i <- soRST[2]
+      
+      seed.orchard <- stringr::str_split(i,"/") %>% map_chr(.,4)
+      period <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,4)
+      rcp.name <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,3)
+      seed.orchard <- stringr::str_split(seed.orchard,"_") %>% map_chr(.,1)
+      
+      SO.name <- ifelse(grepl("SOh60", seed.orchard), 'SO 1.5g 60°N', 
+                        ifelse(grepl("SOhs60", seed.orchard), 'SO 1.5gS 60°N',
+                               ifelse(grepl("SOh62", seed.orchard), 'SO 1.5g 62°N',
+                                      ifelse(grepl("SOhs62", seed.orchard), 'SO 1.5gS 62°N',
+                                             ifelse(grepl("SOh64", seed.orchard), 'SO 1.5g 64°N',
+                                                    ifelse(grepl("SOhs64", seed.orchard), 'SO 1.5gS 64°N',
+                                                           ifelse(grepl("SOh66", seed.orchard), 'SO 1.5g 66°N',
+                                                                  ifelse(grepl("SOhs66", seed.orchard), 'SO 1.5gS 66°N', NA))))))))
+      
+
+      rst <- raster(i)
+      
+      # Convert raster to dataframe
+      dfPathway <- as.data.frame(rst, xy=T)
+      colnames(dfPathway) <- c("x","y","code")
+      # dfPathway$pathway <- NA
+      # dfPathway$pathway[which(dfPathway$code == 1)] <- "Beyond model limits"
+      # dfPathway$pathway[which(dfPathway$code == 2)] <- "Expiry (below local)"
+      # dfPathway$pathway[which(dfPathway$code == 3)] <- "Expiry (low survival)"
+      # dfPathway$pathway[which(dfPathway$code == 4)] <- "Good performance (above local)"
+      # dfPathway$pathway[which(dfPathway$code == 5)] <- "Very good performance (above 110)"
+      # dfPathway$pathway[which(dfPathway$code == 6)] <- "Excellent performance (above 120)"
+      
+      assign(rcp.name, dfPathway$code)
+      
+    }
     
-    rst <- raster(i)
+    dfMaster <- dfPathway[,1:2] %>% 
+      mutate(RCP4.5 = RCP4.5,
+             RCP8.5 = RCP8.5)
+    head(dfMaster)
+    summary(dfMaster)
     
-    # Convert raster to dataframe
-    dfPathway <- as.data.frame(rst, xy=T)
-    colnames(dfPathway) <- c("x","y","code")
-    dfPathway$pathway <- NA
-    dfPathway$pathway[which(dfPathway$code == 1)] <- "Beyond model limits"
-    dfPathway$pathway[which(dfPathway$code == 2)] <- "Expiry (below local)"
-    dfPathway$pathway[which(dfPathway$code == 3)] <- "Expiry (low survival)"
-    dfPathway$pathway[which(dfPathway$code == 4)] <- "Good performance (above local)"
-    dfPathway$pathway[which(dfPathway$code == 5)] <- "Very good performance (above 110)"
-    dfPathway$pathway[which(dfPathway$code == 6)] <- "Excellent performance (above 120)"
+    dfMaster <- dfMaster %>% mutate(recommendation = ifelse(RCP4.5 == RCP8.5, RCP8.5,
+                                                            ifelse(RCP4.5 < RCP8.5, RCP4.5,
+                                                                   ifelse(RCP8.5 < RCP4.5, RCP8.5, NA))))
     
-    dfPathway$pathway <- factor(dfPathway$pathway, ordered=T, levels=c("Excellent performance (above 120)",
-                                                                       "Very good performance (above 110)",
-                                                                       "Good performance (above local)",
-                                                                       "Expiry (below local)",
-                                                                       "Expiry (low survival)",
-                                                                       "Beyond model limits"))
+    #filter(dfMaster, RCP4.5 == 5 & RCP8.5 == 6)
+    
+    dfMaster <- dfMaster %>% pivot_longer(cols = RCP4.5:recommendation, names_to = "scenario", values_to = "code")
+    
+    dfMaster$pathway <- NA
+    dfMaster$pathway[which(dfMaster$code == 1)] <- "Beyond model limits"
+    dfMaster$pathway[which(dfMaster$code == 2)] <- "Expiry (below local)"
+    dfMaster$pathway[which(dfMaster$code == 3)] <- "Expiry (low survival)"
+    dfMaster$pathway[which(dfMaster$code == 4)] <- "Good performance (above local)"
+    dfMaster$pathway[which(dfMaster$code == 5)] <- "Very good performance (above 110)"
+    dfMaster$pathway[which(dfMaster$code == 6)] <- "Excellent performance (above 120)"
+    
+    dfMaster$seed.orchard <- SO.name
+    
+    dfMaster$pathway <- factor(dfMaster$pathway, ordered=T, levels=c("Excellent performance (above 120)",
+                                                                     "Very good performance (above 110)",
+                                                                     "Good performance (above local)",
+                                                                     "Expiry (below local)",
+                                                                     "Expiry (low survival)",
+                                                                     "Beyond model limits"))
     
     if (seed.orchard == "SOh60" | seed.orchard == "SOhs60"){
       lat.lim <- c(6600000,7300000)
-      } else if (seed.orchard == "SOh62" | seed.orchard == "SOhs62"){
-        lat.lim <- c(6600000,7500000)
-      } else if (seed.orchard == "SOh64" | seed.orchard == "SOhs64"){
-        lat.lim <- c(6650000,7650000)
-        } else if (seed.orchard == "SOh66" | seed.orchard == "SOhs66"){
-        lat.lim <- c(6750000,7650000)
-      }
+    } else if (seed.orchard == "SOh62" | seed.orchard == "SOhs62"){
+      lat.lim <- c(6600000,7500000)
+    } else if (seed.orchard == "SOh64" | seed.orchard == "SOhs64"){
+      lat.lim <- c(6650000,7650000)
+    } else if (seed.orchard == "SOh66" | seed.orchard == "SOhs66"){
+      lat.lim <- c(6750000,7650000)
+    }
     
-    (p1 <- ggplot(data = dfPathway) +
+    dfMaster$scenario[which(dfMaster$scenario=="recommendation")] <- "Compound performance"
+    
+    
+    (p1 <- dfMaster %>% filter(scenario != "Compound performance") %>% 
+        ggplot()+#data = dfMaster) +
         geom_sf(data = sweden, fill=NA, col=NA)+
-        geom_tile(data = dfPathway, mapping = aes(x = x, y = y, fill = pathway), size = 1) +
-        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, #na.value = "grey60", 
+        geom_tile(data = dfMaster %>% filter(scenario != "Compound performance"), mapping = aes(x = x, y = y, fill = pathway), size = 1) +
+        facet_grid(seed.orchard~scenario)+
+        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, #na.value = "grey60",
+                            labels = c("Excellent performance (above 120)",
+                                       "Very good performance (above 110)",
+                                       "Good performance (above local)",
+                                       "Expiry (below local)",
+                                       "Expiry (low survival)",
+                                       "Beyond model limits",
+                                       "No GCM majority")
+                           )+
+        #labs(fill="Performance")+
+        theme_bw()+
+        #ggtitle(paste0(SO.name, " | ", rcp.name))+
+        #xlab("Longitude")+ylab("Latitude")+
+        #coord_sf(ylim=lat.lim, xlim=c(269731,918731))+
+        theme(plot.title = element_text(face="bold",size=24),
+              axis.title = element_blank(),#element_text(size=18,face="bold"),
+              axis.text = element_text(size = 16),
+              strip.text = element_text(size = 14, face = "bold"),
+              #axis.ticks = element_blank(),
+              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 14))+
+              legend.position = "none"))
+    #guides(fill = guide_legend(override.aes = list(color = "grey40"))))
+    
+    ggsave(p1, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,"_",period,".png"), width=8, height=6, dpi=300)
+    
+    dfMaster$scenario <- factor(dfMaster$scenario, ordered=TRUE, levels = c("RCP4.5","RCP8.5","Compound performance"))
+    
+    (p2 <- dfMaster %>% 
+        ggplot()+
+        geom_sf(data = sweden, fill=NA, col=NA)+
+        geom_tile(data = dfMaster , mapping = aes(x = x, y = y, fill = pathway), size = 1) +
+        facet_grid(seed.orchard~scenario)+
+        scale_fill_viridis(discrete=T, direction = -1, drop=FALSE, #na.value = "grey60",
                            labels = c("Excellent performance (above 120)",
                                       "Very good performance (above 110)",
                                       "Good performance (above local)",
                                       "Expiry (below local)",
                                       "Expiry (low survival)",
                                       "Beyond model limits",
-                                      "No GCM majority"))+
+                                      "No GCM majority")
+        )+
         #labs(fill="Performance")+
         theme_bw()+
-        ggtitle(paste0(SO.name, " | ", rcp.name))+
+        #ggtitle(paste0(SO.name, " | ", rcp.name))+
         #xlab("Longitude")+ylab("Latitude")+
-        coord_sf(ylim=lat.lim, xlim=c(269731,918731))+
+        #coord_sf(ylim=lat.lim, xlim=c(269731,918731))+
         theme(plot.title = element_text(face="bold",size=24),
               axis.title = element_blank(),#element_text(size=18,face="bold"),
               axis.text = element_text(size = 16),
+              strip.text = element_text(size = 12, face = "bold"),
               #axis.ticks = element_blank(),
               #legend.title = element_text(size = 16, face = "bold", vjust = 3),
               #legend.text = element_text(size = 14))+
               legend.position = "none"))
-        #guides(fill = guide_legend(override.aes = list(color = "grey40"))))
+    #guides(fill = guide_legend(override.aes = list(color = "grey40"))))
     
-    ggsave(p1, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,"_",rcp,"_",period,".png"), width=8, height=10, dpi=300)
+    ggsave(p2, file=paste0(dirFigs,"Pathway_per_pixel_",seed.orchard,"_",period,"_compound.png"), width=14, height=6, dpi=300)
     
   }
   
 }
-
-
 
 # get legend
 # in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
@@ -467,53 +547,56 @@ lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("ixel", lstPlots, value=TRUE)
 
 lst1 <- grep("Oh6", lstPlots, value=TRUE)
-lst1 <- grep("2050_2050", lst1, value=TRUE)
+lst1 <- grep("2050.png", lst1, value=TRUE)
+lst1 <- lst1[c(10,7,4,1)]
 lst1 <- append(lst1, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r1 <- lapply(lst1, png::readPNG)
 g1 <- lapply(r1, grid::rasterGrob)
 
 ggsave(gridExtra::grid.arrange(grobs=g1, 
-                               ncol=3,
-                               layout_matrix = cbind(c(1,3,5,7),
-                                                     c(2,4,6,8),
-                                                     c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways_2050.png"),
+                               ncol=2,
+                               layout_matrix = cbind(c(1,2,3,4),
+                                                     #c(2,4,6,8),
+                                                     c(5,5,5,5))), 
+       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways_2050_2.png"),
        width=24, 
        height=40, 
        dpi=300)
 
 lst2 <- grep("Ohs6", lstPlots, value=TRUE)
-lst2 <- grep("2050_2050", lst2, value=TRUE)
+lst2 <- grep("2050.png", lst2, value=TRUE)
+lst2 <- lst2[c(10,7,4,1)]
 lst2 <- append(lst2, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r2 <- lapply(lst2, png::readPNG)
 g2 <- lapply(r2, grid::rasterGrob)
 
 ggsave(gridExtra::grid.arrange(grobs=g2, 
-                               ncol=3,
-                               layout_matrix = cbind(c(1,3,5,7),
-                                                     c(2,4,6,8),
-                                                     c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2050.png"),
+                               ncol=2,
+                               layout_matrix = cbind(c(1,2,3,4),
+                                                     #c(2,4,6,8),
+                                                     c(5,5,5,5))), 
+       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2050_2.png"),
        width=24, 
        height=40, 
        dpi=300)
 
 
 lst3 <- grep("Oh6", lstPlots, value=TRUE)
-lst3 <- grep("2070_2070", lst3, value=TRUE)
+lst3 <- grep("2070.png", lst3, value=TRUE)
+lst3 <- lst3[c(10,7,4,1)]
 lst3 <- append(lst3, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r3 <- lapply(lst3, png::readPNG)
 g3 <- lapply(r3, grid::rasterGrob)
 
 ggsave(gridExtra::grid.arrange(grobs=g3, 
-                               ncol=3,
-                               layout_matrix = cbind(c(1,3,5,7),
-                                                     c(2,4,6,8),
-                                                     c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways_2070.png"),
+                               ncol=2,
+                               layout_matrix = cbind(c(1,2,3,4),
+                                                     #c(2,4,6,8),
+                                                     c(5,5,5,5))), 
+       file=paste0(dirFigs,"Seed_orchard_height_gain_pathways_2070_2.png"),
        width=24, 
        height=40, 
        dpi=300)
