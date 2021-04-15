@@ -419,8 +419,7 @@ for (yr in lstYrs){
     summary(dfMaster)
     
     dfMaster <- dfMaster %>% mutate(recommendation = ifelse(RCP4.5 == RCP8.5, RCP8.5,
-                                                            ifelse(RCP4.5 < RCP8.5, RCP4.5,
-                                                                   ifelse(RCP8.5 < RCP4.5, RCP8.5, NA))))
+                                                            ifelse(RCP4.5 < RCP8.5, RCP4.5, RCP8.5)))
     
     #filter(dfMaster, RCP4.5 == 5 & RCP8.5 == 6)
     
@@ -443,15 +442,15 @@ for (yr in lstYrs){
                                                                      "Expiry (low survival)",
                                                                      "Beyond model limits"))
     
-    if (seed.orchard == "SOh60" | seed.orchard == "SOhs60"){
-      lat.lim <- c(6600000,7300000)
-    } else if (seed.orchard == "SOh62" | seed.orchard == "SOhs62"){
-      lat.lim <- c(6600000,7500000)
-    } else if (seed.orchard == "SOh64" | seed.orchard == "SOhs64"){
-      lat.lim <- c(6650000,7650000)
-    } else if (seed.orchard == "SOh66" | seed.orchard == "SOhs66"){
-      lat.lim <- c(6750000,7650000)
-    }
+    # if (seed.orchard == "SOh60" | seed.orchard == "SOhs60"){
+    #   lat.lim <- c(6600000,7300000)
+    # } else if (seed.orchard == "SOh62" | seed.orchard == "SOhs62"){
+    #   lat.lim <- c(6600000,7500000)
+    # } else if (seed.orchard == "SOh64" | seed.orchard == "SOhs64"){
+    #   lat.lim <- c(6650000,7650000)
+    # } else if (seed.orchard == "SOh66" | seed.orchard == "SOhs66"){
+    #   lat.lim <- c(6750000,7650000)
+    # }
     
     dfMaster$scenario[which(dfMaster$scenario=="recommendation")] <- "Compound performance"
     
@@ -603,18 +602,19 @@ ggsave(gridExtra::grid.arrange(grobs=g3,
 
 
 lst4 <- grep("Ohs6", lstPlots, value=TRUE)
-lst4 <- grep("2070_2070", lst4, value=TRUE)
+lst4 <- grep("2070.png", lst4, value=TRUE)
+lst4 <- lst4[c(10,7,4,1)]
 lst4 <- append(lst4, "C:/Users/vanessa.burton.sb/Documents/FFMPs/figures/Pixel_Pathway_legend.png" )
 
 r4 <- lapply(lst4, png::readPNG)
 g4 <- lapply(r4, grid::rasterGrob)
 
 ggsave(gridExtra::grid.arrange(grobs=g4, 
-                               ncol=3,
-                               layout_matrix = cbind(c(1,3,5,7),
-                                                     c(2,4,6,8),
-                                                     c(9,9,9,9))), 
-       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2070.png"),
+                               ncol=2,
+                               layout_matrix = cbind(c(1,2,3,4),
+                                                     #c(2,4,6,8),
+                                                     c(5,5,5,5))), 
+       file=paste0(dirFigs,"Seed_orchard_height_&_survival_gain_pathways_2070_2.png"),
        width=24, 
        height=40, 
        dpi=300)
