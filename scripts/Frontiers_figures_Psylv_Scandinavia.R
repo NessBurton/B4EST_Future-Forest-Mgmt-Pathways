@@ -641,9 +641,217 @@ dfReference %>%
 
 names(dfReference)
 # take random sample before plotting otherwise carnage!!
-dfReference %>% sample_n(1000)
+dfReference %>% sample_n(1000) %>% 
   ggplot()+
   geom_point(aes(x=GridAlt,y=PrHeightMeanLat))+
   geom_smooth(aes(x=GridAlt,y=PrHeightMeanLat))+
   theme_bw()+
   ylab("Height (cm)")+xlab("Altitude (m)")
+
+### plot GDD5 change - change from baseline ------------------------------------
+
+# plot reference GDD5 first
+
+# convert to spatial
+spRef <- dfReference
+coordinates(spRef) <- ~ CenterLong + CenterLat
+
+# define lat long crs
+proj4string(spRef) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+
+# transform points to utm
+spRef <- spTransform(spRef, CRSobj = utm)
+
+rstUTM <- raster(crs = crs(spRef), resolution = c(1100,1100), ext = extent(spRef))
+
+# rasterise 
+rstGDD5 <- rasterize(spRef, rstUTM, spRef$GDD5Current, fun=max, na.rm=TRUE) 
+
+# reproject to lat long (so plotted in same projection as med region for figures)
+rstRP <- projectRaster(rstGDD5, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+# Convert raster to dataframe
+dfGDD5 <- as.data.frame(rstRP, xy=T)
+colnames(dfGDD5) <- c("x","y","GDD5")
+
+# add discrete option for plotting
+#dfCV$CoV_discrete <- cut(dfCV$CoV, breaks = seq(from=0,to=80, length.out=9))
+
+(p4 <- ggplot(data = dfGDD5) +
+    geom_tile(data = dfGDD5 %>%  filter(!is.na(GDD5)), mapping = aes(x = x, y = y, fill = GDD5), size = 1) +
+    scale_fill_viridis(option = "inferno", limits = c(0,2000))+
+    labs(fill="GDD5")+
+    theme_bw()+
+    ggtitle("GDD5 1961-1990")+
+    xlab("Longitude")+ylab("Latitude")+
+    theme(plot.title = element_text(face="bold",size=22),
+          #axis.title = element_blank(),
+          #axis.text = element_blank(),
+          #axis.ticks = element_blank(),
+          legend.title = element_text(size = 16, face = "bold", vjust = 3),
+          legend.text = element_text(size = 14)))
+          #legend.position = "none"))
+
+ggsave(p4, file=paste0(dirFigs,"GDD5_reference_period.png"), width=10, height=10, dpi=300)
+
+
+# plot GDD5 change per GCM/RCP
+
+# calculate GDD5 change per GCM
+dfGDD5Future <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","GDD5Future","GCM","RCP")) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "GDD5Future")
+
+# re-join to lat-long using gridID
+dfReference
+dfCoords <- dfReference[,c(1:3,6)] # AND reference GDD5
+
+dfGDD5Future <- merge(dfCoords,dfGDD5Future,by = "GridID")
+
+dfGDD5Future <- dfGDD5Future %>% mutate(bcDiff = `bc - BCC-CSM1-1` - GDD5Current,
+                        heDiff = `he - HadGEM2-ES` - GDD5Current,
+                        mgDiff = `mg - MRI-CGCM3` - GDD5Current,
+                        miDiff = `mi - MIROC-ESM-CHEM` - GDD5Current,
+                        noDiff = `no - NorESM1-M` - GDD5Current)
+
+# then plot
+lstRCP <- c("2.6","6.0","4.5","8.5")
+
+# load country outlines
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+nordic <- worldmap[worldmap$name %in% c('Norway','Sweden','Finland')==TRUE,]
+nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+for (rcp in lstRCP){
+  
+  #rcp <- lstRCP[1]
+  
+  rcp.name <- paste0("RCP",rcp)
+  rcp.grep <- str_replace_all(rcp, "[.]","")
+  
+  dfFilter <- dfGDD5Future %>% 
+    filter(RCP == rcp)
+  
+  # convert to spatial
+  spP <- dfFilter
+  #rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  for (var in names(spP)[c(9:13)]){
+    
+    #var <- names(spP)[9]
+    
+    gcm.name <- ifelse(grepl("bc", var), 'bc - BCC-CSM1-1',
+                       ifelse(grepl("he", var), 'he - HadGEM2-ES',
+                              ifelse(grepl("mg", var), 'mg - MRI-CGCM3',
+                                     ifelse(grepl("mi", var), 'mi - MIROC-ESM-CHEM',
+                                            ifelse(grepl("no", var), 'no - NorESM1-M',
+                                                   ifelse(grepl("MEAN", var), "Ensemble", NA))))))
+    
+    # rasterise 
+    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    rstRP <- projectRaster(rst, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    
+    # Convert raster to dataframe
+    dfGDD5 <- as.data.frame(rstRP, xy=T)
+    colnames(dfGDD5) <- c("x","y","GDD5change")
+    
+    (p5 <- ggplot(data = dfGDD5) +
+        geom_tile(data = dfGDD5 %>% filter(!is.na(GDD5change)), mapping = aes(x = x, y = y, fill = GDD5change), size = 1) +
+        scale_fill_viridis(option = "inferno", limits = c(0,2000))+
+        theme_bw()+
+        ggtitle(gcm.name)+
+        #labs(fill="GDD5 change from baseline")+
+        xlab("Longitude")+ylab("Latitude")+
+        theme(plot.title = element_text(face="bold",size=22),
+              #axis.title = element_blank(),
+              #axis.text = element_blank(),
+              #axis.ticks = element_blank(),
+              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 14)))
+              legend.position = "none"))
+    
+    ggsave(p5, file=paste0(dirFigs,"GDD5change_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
+    
+  }
+  
+}
+
+# get legend
+# in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
+library(ggpubr)
+
+# Extract the legend. Returns a gtable
+legend <- get_legend(p5)
+
+# Convert to a ggplot and save
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"GDD5_legend.png"),width=4, height=6, dpi=300)
+
+
+### arrange in single figure per RCP ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("GDD5change", lstPlots, value=TRUE)
+
+lstPlotsRCP2.5 <- grep("26",lstPlots,value = TRUE)
+lstPlotsRCP2.5 <- append(lstPlotsRCP2.5, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+
+r <- lapply(lstPlotsRCP2.5, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                               ncol=2,
+                               layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP26_GDD5_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP45 <- grep("45",lstPlots,value = TRUE)
+lstPlotsRCP45 <- append(lstPlotsRCP45, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+
+r <- lapply(lstPlotsRCP45, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP45_GDD5_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP60 <- grep("60",lstPlots,value = TRUE)
+lstPlotsRCP60 <- append(lstPlotsRCP60, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+
+r <- lapply(lstPlotsRCP60, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP60_GDD5_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP85 <- grep("85",lstPlots,value = TRUE)
+lstPlotsRCP85 <- append(lstPlotsRCP85, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+
+r <- lapply(lstPlotsRCP85, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP85_GDD5_change.png"),width=16, height=20, dpi=300)
