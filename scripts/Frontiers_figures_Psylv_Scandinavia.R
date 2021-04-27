@@ -69,15 +69,15 @@ dfReference <- vroom(files[25])
 
 dfReference$PrHeightMinLat[which(dfReference$CenterLat < 52.6 | dfReference$CenterLat > 62.6)] <- NA
 dfReference$PrHeightMinLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
-minLatMean <- mean(dfReference$PrHeightMinLat, na.rm = TRUE) # 393.3 cm
+#minLatMean <- mean(dfReference$PrHeightMinLat, na.rm = TRUE) # 393.3 cm
 
 dfReference$PrHeightMeanLat[which(dfReference$CenterLat < 59.87 | dfReference$CenterLat > 69.87)] <- NA
 dfReference$PrHeightMeanLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
-meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
+#meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
 
 dfReference$PrHeightMaxLat[which(dfReference$CenterLat < 64.77 | dfReference$CenterLat > 74.77)] <- NA
 dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
-maxLatMean <- mean(dfReference$PrHeightMaxLat, na.rm = TRUE) # 251.2 cm
+#maxLatMean <- mean(dfReference$PrHeightMaxLat, na.rm = TRUE) # 251.2 cm
 
 
 
@@ -245,27 +245,32 @@ for (i in pathList){
   
   print("Apply thresholds to each prediction")
   
+  # new vars with reference period height
+  dfFilter$RefHeightMinLat <- dfReference$PrHeightMinLat
+  dfFilter$RefHeightMeanLat <- dfReference$PrHeightMeanLat
+  dfFilter$RefHeightMaxLat <- dfReference$PrHeightMaxLat
+  
   # per min/mean/max prediction
   # create reclass field & threshold field
   dfFilter$PrHeightMinLatRC <- NA
-  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat >= minLatMean)] <- 1 # above mean = 1
-  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat < minLatMean)] <- -1 # below mean = -1
+  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat >= dfFilter$RefHeightMinLat)] <- 1 # above mean = 1
+  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat < dfFilter$RefHeightMinLat)] <- -1 # below mean = -1
   
   dfFilter$MinThresh <- NA
   dfFilter$MinThresh[which(dfFilter$CenterLat < 52.6 | dfFilter$CenterLat > 62.6)] <- 1 # beyond threshold = 1
   dfFilter$MinThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
   
   dfFilter$PrHeightMeanLatRC <- NA
-  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat >= meanLatMean)] <- 1
-  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat < meanLatMean)] <- -1
+  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat >= dfFilter$RefHeightMeanLat)] <- 1
+  dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat < dfFilter$RefHeightMeanLat)] <- -1
   
   dfFilter$MeanThresh <- NA
   dfFilter$MeanThresh[which(dfFilter$CenterLat < 59.87 | dfFilter$CenterLat > 69.87)] <- 1
   dfFilter$MeanThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
   
   dfFilter$PrHeightMaxLatRC <- NA
-  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat >= maxLatMean)] <- 1
-  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat < maxLatMean)] <- -1
+  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat >= dfFilter$RefHeightMaxLat)] <- 1
+  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat < dfFilter$RefHeightMaxLat)] <- -1
   
   dfFilter$MaxThresh <- NA
   dfFilter$MaxThresh[which(dfFilter$CenterLat < 64.77 | dfFilter$CenterLat > 74.77)] <- 1
@@ -439,11 +444,11 @@ library(png)
 library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
-lstPlots <- grep("GCM_agreement", lstPlots, value=TRUE)
-lstPlots <- lstPlots[c(1,6,7,8,9)]
-lstPlots <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
+lstPlots1 <- grep("GCM_agreement", lstPlots, value=TRUE)
+lstPlots1 <- lstPlots[c(1,6,7,8,9)]
+lstPlots1 <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
 
-rl <- lapply(lstPlots, png::readPNG)
+rl <- lapply(lstPlots1, png::readPNG)
 gl <- lapply(rl, grid::rasterGrob)
 (c1 <- gridExtra::grid.arrange(grobs=gl, 
                                ncol=3,
