@@ -519,7 +519,7 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
 
 for (rcp in lstRCP){
   
-  #rcp <- lstRCP[1]
+  #rcp <- lstRCP[3]
   
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
@@ -551,7 +551,7 @@ for (rcp in lstRCP){
   colnames(dfCV) <- c("x","y","CoV")
   
   # add discrete option for plotting
-  dfCV$CoV_discrete <- cut(dfCV$CoV, breaks = seq(from=0,to=100, length.out=11))
+  dfCV$CoV_discrete <- cut(dfCV$CoV, breaks = seq(from=0,to=80, length.out=9))
   
   # read in correct threshold rasters
   rstsRCP <- grep(rcp.grep, rstsTh, value=TRUE)
@@ -578,10 +578,10 @@ for (rcp in lstRCP){
       geom_tile(data = dfCV %>% filter(!is.na(CoV_discrete)), mapping = aes(x = x, y = y, fill = CoV_discrete), size = 1) +
       scale_fill_viridis(option = "plasma", 
                          discrete = T,
-                         labels = c("0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"))+
+                         labels = c("0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%"))+#,"80-90%","90-100%"))+
       #labs(fill="Coefficient of Variation (%)")+
       new_scale("fill") +
-      geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
+      geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.5) +
       scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
       theme_bw()+
       ggtitle(rcp.name)+
