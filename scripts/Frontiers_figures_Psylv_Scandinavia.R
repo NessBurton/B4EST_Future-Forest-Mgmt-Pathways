@@ -67,19 +67,21 @@ dfReference <- vroom(files[25])
 # maxLat = 69.77
 # GDD5 thresholds = less than 527, greater than 1349
 
-dfReference$PrHeightMinLat[which(dfReference$CenterLat < 52.6 | dfReference$CenterLat > 62.6)] <- NA
-dfReference$PrHeightMinLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
+#dfReference$PrHeightMinLat[which(dfReference$CenterLat < 52.6 | dfReference$CenterLat > 62.6)] <- NA
+#dfReference$PrHeightMinLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
 #minLatMean <- mean(dfReference$PrHeightMinLat, na.rm = TRUE) # 393.3 cm
 
-dfReference$PrHeightMeanLat[which(dfReference$CenterLat < 59.87 | dfReference$CenterLat > 69.87)] <- NA
-dfReference$PrHeightMeanLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
+#dfReference$PrHeightMeanLat[which(dfReference$CenterLat < 59.87 | dfReference$CenterLat > 69.87)] <- NA
+#dfReference$PrHeightMeanLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
 #meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
 
-dfReference$PrHeightMaxLat[which(dfReference$CenterLat < 64.77 | dfReference$CenterLat > 74.77)] <- NA
-dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
+#dfReference$PrHeightMaxLat[which(dfReference$CenterLat < 64.77 | dfReference$CenterLat > 74.77)] <- NA
+#dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
 #maxLatMean <- mean(dfReference$PrHeightMaxLat, na.rm = TRUE) # 251.2 cm
 
-
+dfRef <- dfReference[,c(1,9:11)]
+colnames(dfRef) <- c("GridID","RefMinLat","RefMeanLat","RefMaxLat")
+dfPredictions <- left_join(dfPredictions,dfRef,by="GridID")
 
 ### new var, remove data beyond thresholds -------------------------------------
 
@@ -243,8 +245,6 @@ for (i in pathList){
   
   print(paste0("Processing for scenario: ",scenario))
   
-  print("Apply thresholds to each prediction")
-  
   # new vars with reference period height
   dfFilter$RefHeightMinLat <- dfReference$PrHeightMinLat
   dfFilter$RefHeightMeanLat <- dfReference$PrHeightMeanLat
@@ -290,7 +290,7 @@ for (i in pathList){
   rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
   
   # rasterise reclass
-  for (var in names(spP)[c(14,16,18)]){ # rasterise performance for 3 reclassed predictions
+  for (var in names(spP)[c(16,18,20)]){ # rasterise performance for 3 reclassed predictions
     
     #var <- names(spP)[14]
     print(paste0("Rasterising for var = ", var))
@@ -304,7 +304,7 @@ for (i in pathList){
   }
   
   # rasterise thresholds
-  for (var in names(spP)[c(15,17,19)]){ # rasterise performance for 3 thresholds
+  for (var in names(spP)[c(17,19,21)]){ # rasterise performance for 3 thresholds
     
     #var <- names(spP)[9]
     print(paste0("Rasterising for var = ", var))
@@ -398,7 +398,7 @@ for (rcp in lstRCP){
                              low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
         #labs(fill="GCM agreement")+
         new_scale("fill") +
-        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.7) +
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.5) +
         scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
         #scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
         #labels = c("Possible", "Likely", "Very likely"),
@@ -445,8 +445,8 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots1 <- grep("GCM_agreement", lstPlots, value=TRUE)
-lstPlots1 <- lstPlots[c(1,6,7,8,9)]
-lstPlots1 <- lstPlots[c(2,4,3,5,1)] # specific order for plotting
+lstPlots1 <- lstPlots1[c(1,6,7,8,9)]
+lstPlots1 <- lstPlots1[c(2,4,3,5,1)] # specific order for plotting
 
 rl <- lapply(lstPlots1, png::readPNG)
 gl <- lapply(rl, grid::rasterGrob)
