@@ -83,6 +83,177 @@ dfRef <- dfReference[,c(1,9:11)]
 colnames(dfRef) <- c("GridID","RefMinLat","RefMeanLat","RefMaxLat")
 dfPredictions <- left_join(dfPredictions,dfRef,by="GridID")
 
+
+### plot height difference per pred --------------------------------------------
+
+head(dfPredictions)
+
+dfPredictions <- dfPredictions %>% mutate(heightDiff = PrHeightMeanLat - RefMeanLat)
+
+dfHeightDiff <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","heightDiff","GCM","RCP")) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "heightDiff")
+
+# re-join to lat-long using gridID
+dfReference
+dfCoords <- dfReference[,c(1:3,6)] # AND reference GDD5
+
+dfHeightDiff <- merge(dfCoords,dfHeightDiff,by = "GridID")
+
+# then plot
+lstRCP <- c("2.6","6.0","4.5","8.5")
+
+# load country outlines
+worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                         returnclass = 'sf')
+nordic <- worldmap[worldmap$name %in% c('Norway','Sweden','Finland')==TRUE,]
+nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+# for utm crs
+shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
+utm <- crs(shpSZ)
+
+for (rcp in lstRCP){
+  
+  #rcp <- lstRCP[1]
+  
+  rcp.name <- paste0("RCP",rcp)
+  rcp.grep <- str_replace_all(rcp, "[.]","")
+  
+  dfFilter <- dfHeightDiff %>% 
+    filter(RCP == rcp)
+  
+  # convert to spatial
+  spP <- dfFilter
+  #rm(dfFilter)
+  coordinates(spP) <- ~ CenterLong + CenterLat
+  
+  # define lat long crs
+  proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+  
+  # transform points to utm
+  spP <- spTransform(spP, CRSobj = utm)
+  
+  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  
+  for (var in names(spP)[c(4:8)]){
+    
+    #var <- names(spP)[4]
+    
+    gcm.name <- ifelse(grepl("bc", var), 'bc - BCC-CSM1-1',
+                       ifelse(grepl("he", var), 'he - HadGEM2-ES',
+                              ifelse(grepl("mg", var), 'mg - MRI-CGCM3',
+                                     ifelse(grepl("mi", var), 'mi - MIROC-ESM-CHEM',
+                                            ifelse(grepl("no", var), 'no - NorESM1-M',
+                                                   ifelse(grepl("MEAN", var), "Ensemble", NA))))))
+    
+    # rasterise 
+    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    rstRP <- projectRaster(rst, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    
+    # Convert raster to dataframe
+    dfDiff <- as.data.frame(rstRP, xy=T)
+    colnames(dfDiff) <- c("x","y","HeightChange")
+    
+    (p5 <- ggplot(data = dfDiff) +
+        geom_tile(data = dfDiff %>% filter(!is.na(HeightChange)), mapping = aes(x = x, y = y, fill = HeightChange), size = 1) +
+        scale_fill_viridis(limits=c(0,800))+
+        theme_bw()+
+        ggtitle(gcm.name)+
+        #labs(fill="Height change from baseline")+
+        xlab("Longitude")+ylab("Latitude")+
+        theme(plot.title = element_text(face="bold",size=22),
+              #axis.title = element_blank(),
+              #axis.text = element_blank(),
+              #axis.ticks = element_blank(),
+              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 14)))
+              legend.position = "none"))
+    
+    ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
+    
+  }
+  
+}
+
+# get legend
+# in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
+library(ggpubr)
+
+# Extract the legend. Returns a gtable
+legend <- get_legend(p5)
+
+# Convert to a ggplot and save
+legend <- as_ggplot(legend)
+plot(legend)
+ggsave(legend, file=paste0(dirFigs,"HeightChange_legend.png"),width=4, height=6, dpi=300)
+
+# histogram
+(h1 <- ggplot(dfPredictions)+
+    geom_histogram(aes(x=heightDiff))+
+    theme_bw())
+
+ggsave(h1, file=paste0(dirFigs,"HeightChange_histogram.png"),width=6, height=6, dpi=300)
+
+
+### arrange in single figure per RCP ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("HeightChange", lstPlots, value=TRUE)
+
+lstPlotsRCP2.5 <- grep("26",lstPlots,value = TRUE)
+lstPlotsRCP2.5 <- append(lstPlotsRCP2.5, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+
+r <- lapply(lstPlotsRCP2.5, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP26_Height_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP45 <- grep("45",lstPlots,value = TRUE)
+lstPlotsRCP45 <- append(lstPlotsRCP45, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+
+r <- lapply(lstPlotsRCP45, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP45_Height_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP60 <- grep("60",lstPlots,value = TRUE)
+lstPlotsRCP60 <- append(lstPlotsRCP60, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+
+r <- lapply(lstPlotsRCP60, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP60_Height_change.png"),width=16, height=20, dpi=300)
+
+lstPlotsRCP85 <- grep("85",lstPlots,value = TRUE)
+lstPlotsRCP85 <- append(lstPlotsRCP85, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+
+r <- lapply(lstPlotsRCP85, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=2,
+                              layout_matrix = cbind(c(1,2,3), c(4,5,6))))
+
+ggsave(c, file=paste0(dirFigs,"RCP85_Height_change.png"),width=16, height=20, dpi=300)
+
+
 ### new var, remove data beyond thresholds -------------------------------------
 
 dfPredictions$PrHeightMinLatT <- dfPredictions$PrHeightMinLat
