@@ -57,6 +57,18 @@ dfPredictions$RCP <- ifelse(grepl("26", dfPredictions$path), '2.6',
                                           ifelse(grepl("85", dfPredictions$path), '8.5', 'Reference'))))
 
 
+### just means -----------------------------------------------------------------
+
+filesMean <- files[9:12]
+
+dfMeans <- vroom(filesMean, id="path")
+dfMeans <- dfMeans[,c("path","GridID","CenterLat","CenterLong","Country",
+                                  "GDD5Future","PrHeightLocal",
+                                  "PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")]
+dfMeans$RCP <- ifelse(grepl("26", dfMeans$path), '2.6', 
+                            ifelse(grepl("45", dfMeans$path), '4.5', 
+                                   ifelse(grepl("60", dfMeans$path), '6.0', 
+                                          ifelse(grepl("85", dfMeans$path), '8.5', 'Reference'))))
 
 ### climate baseline period means ----------------------------------------------
 
@@ -81,20 +93,25 @@ dfReference <- vroom(files[25])
 
 dfRef <- dfReference[,c(1,9:11)]
 colnames(dfRef) <- c("GridID","RefMinLat","RefMeanLat","RefMaxLat")
-dfPredictions <- left_join(dfPredictions,dfRef,by="GridID")
-
+#dfPredictions <- left_join(dfPredictions,dfRef,by="GridID")
+dfMeans <- left_join(dfMeans,dfRef,by="GridID")
 
 ### plot height difference per pred --------------------------------------------
 
-head(dfPredictions)
+#head(dfPredictions)
+head(dfMeans)
+names(dfMeans)
 
-dfPredictions <- dfPredictions %>% mutate(heightDiff = PrHeightMeanLat - RefMeanLat)
+#dfPredictions <- dfPredictions %>% mutate(heightDiff = PrHeightMeanLat - RefMeanLat)
+dfMeans <- dfMeans %>% mutate(heightDiff = PrHeightMeanLat - RefMeanLat)
 
-dfHeightDiff <- dfPredictions %>% 
-  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
-  dplyr::select(c("GridID","heightDiff","GCM","RCP")) %>% 
-  pivot_wider(id_cols = c("GridID","RCP"), 
-              names_from = GCM, values_from = "heightDiff")
+dfHeightDiff <- dfMeans %>% #dfPredictions %>% 
+  #filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  #dplyr::select(c("GridID","heightDiff","GCM","RCP")) %>%
+  dplyr::select(c("GridID","heightDiff","RCP")) %>% 
+  pivot_wider(#id_cols = c("GridID","RCP"), 
+              id_cols = c("GridID"),
+              names_from = RCP, values_from = "heightDiff")
 
 # re-join to lat-long using gridID
 dfReference
@@ -103,7 +120,7 @@ dfCoords <- dfReference[,c(1:3,6)] # AND reference GDD5
 dfHeightDiff <- merge(dfCoords,dfHeightDiff,by = "GridID")
 
 # then plot
-lstRCP <- c("2.6","6.0","4.5","8.5")
+#lstRCP <- c("2.6","6.0","4.5","8.5")
 
 # load country outlines
 worldmap <- ne_countries(scale = 'medium', type = 'map_units',
@@ -115,18 +132,19 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
 shpSZ <- st_read(paste0(dirData,"Seed_zones_SP_Sweden/Shaper/Frözoner_tall_Sverige.shp"))
 utm <- crs(shpSZ)
 
-for (rcp in lstRCP){
+#for (rcp in lstRCP){
   
   #rcp <- lstRCP[1]
   
-  rcp.name <- paste0("RCP",rcp)
-  rcp.grep <- str_replace_all(rcp, "[.]","")
+  #rcp.name <- paste0("RCP",rcp)
+  #rcp.grep <- str_replace_all(rcp, "[.]","")
   
-  dfFilter <- dfHeightDiff %>% 
-    filter(RCP == rcp)
+  #dfFilter <- dfHeightDiff %>% 
+    #filter(RCP == rcp)
   
   # convert to spatial
-  spP <- dfFilter
+  #spP <- dfFilter
+  spP <- dfHeightDiff
   #rm(dfFilter)
   coordinates(spP) <- ~ CenterLong + CenterLat
   
@@ -138,16 +156,27 @@ for (rcp in lstRCP){
   
   rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
   
-  for (var in names(spP)[c(4:8)]){
+  #for (var in names(spP)[c(4:8)]){
+  for (var in names(spP)[c(3:6)]){ 
     
-    #var <- names(spP)[4]
+    #var <- names(spP)[3]
     
-    gcm.name <- ifelse(grepl("bc", var), 'bc - BCC-CSM1-1',
-                       ifelse(grepl("he", var), 'he - HadGEM2-ES',
-                              ifelse(grepl("mg", var), 'mg - MRI-CGCM3',
-                                     ifelse(grepl("mi", var), 'mi - MIROC-ESM-CHEM',
-                                            ifelse(grepl("no", var), 'no - NorESM1-M',
-                                                   ifelse(grepl("MEAN", var), "Ensemble", NA))))))
+    # gcm.name <- ifelse(grepl("bc", var), 'bc - BCC-CSM1-1',
+    #                    ifelse(grepl("he", var), 'he - HadGEM2-ES',
+    #                           ifelse(grepl("mg", var), 'mg - MRI-CGCM3',
+    #                                  ifelse(grepl("mi", var), 'mi - MIROC-ESM-CHEM',
+    #                                         ifelse(grepl("no", var), 'no - NorESM1-M',
+    #                                                ifelse(grepl("MEAN", var), "Ensemble", NA))))))
+    
+    rcp.name <- ifelse(grepl("2.6", var), 'RCP2.6', 
+                       ifelse(grepl("4.5", var), 'RCP4.5', 
+                              ifelse(grepl("6.0", var), 'RCP6.0', 
+                                     ifelse(grepl("8.5", var), 'RCP8.5', 'Reference'))))
+    
+    letter <- ifelse(grepl("2.6", var), 'A.', 
+                        ifelse(grepl("4.5", var), 'B.', 
+                               ifelse(grepl("6.0", var), 'C.', 
+                                      ifelse(grepl("8.5", var), 'D.', ''))))
     
     # rasterise 
     rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
@@ -159,14 +188,21 @@ for (rcp in lstRCP){
     dfDiff <- as.data.frame(rstRP, xy=T)
     colnames(dfDiff) <- c("x","y","HeightChange")
     
+    dfDiff$HeightChange[which(dfDiff$HeightChange>500)]<-500
+    
     (p5 <- ggplot(data = dfDiff) +
         geom_tile(data = dfDiff %>% filter(!is.na(HeightChange)), mapping = aes(x = x, y = y, fill = HeightChange), size = 1) +
-        scale_fill_viridis(limits=c(0,800))+
+        scale_fill_viridis(limits=c(0,500),
+                           labels=c("0","100","200","300","400","500+"))+
         theme_bw()+
-        ggtitle(gcm.name)+
-        #labs(fill="Height change from baseline")+
+        ggtitle(letter,
+                subtitle = rcp.name)+
+        #labs(fill="Height change (cm)")+
         xlab("Longitude")+ylab("Latitude")+
-        theme(plot.title = element_text(face="bold",size=22),
+        theme(plot.title = element_text(size=20, face="bold"),
+              plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
+              axis.title = element_text(size=16),
+              axis.text = element_text(size=14),
               #axis.title = element_blank(),
               #axis.text = element_blank(),
               #axis.ticks = element_blank(),
@@ -174,11 +210,13 @@ for (rcp in lstRCP){
               #legend.text = element_text(size = 14)))
               legend.position = "none"))
     
-    ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
+    #ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
+    ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",var,".png"), width=8, height=10, dpi=300)
+    
     
   }
   
-}
+##}
 
 # get legend
 # in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
@@ -200,7 +238,42 @@ ggsave(legend, file=paste0(dirFigs,"HeightChange_legend.png"),width=4, height=6,
 ggsave(h1, file=paste0(dirFigs,"HeightChange_histogram.png"),width=6, height=6, dpi=300)
 
 
-### arrange in single figure per RCP ------------------------------------
+### arrange mean RCP plots in single figure ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("HeightChange", lstPlots, value=TRUE)
+lstPlots <- lstPlots[c(3,9,15,21)]
+lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+
+r <- lapply(lstPlots, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=3,
+                              layout_matrix = cbind(c(1,3), c(2,4), c(5,5))))
+
+# testing labelling
+#plots <- mapply(arrangeGrob, r, bottom=c("A.", "B.", "C.", "D.",""), SIMPLIFY=FALSE)
+#do.call(grid.arrange, plots)
+
+#library(cowplot)
+#plot_grid(g, labels=c("A","B","C","D","",""), ncol=3, nrow=2)
+
+# titles <- lapply(paste0("(", letters[seq_len(4)], ")"), 
+#                  textGrob, x = 0, hjust = 0, vjust = 1)
+# 
+# library(gtable)
+# strips <- c$layout[grep("strip_t", c$layout$name), ]
+# gtable_add_grob(c, grobs = titles, 
+#                 t = strips$t, b = strips$b - 2, 
+#                 l = strips$l, r = strips$r)
+
+ggsave(c, file=paste0(dirFigs,"Mean_height_change_per_RCP.png"),width=16, height=15, dpi=300)
+
+### arrange in single figure per RCP -------------------------------------------
 
 library(grid)
 library(png)
@@ -850,7 +923,7 @@ colnames(dfGDD5) <- c("x","y","GDD5")
 
 (p4 <- ggplot(data = dfGDD5) +
     geom_tile(data = dfGDD5 %>%  filter(!is.na(GDD5)), mapping = aes(x = x, y = y, fill = GDD5), size = 1) +
-    scale_fill_viridis(option = "inferno", limits = c(0,2000))+
+    scale_fill_viridis(option = "magma", limits = c(0,2000))+
     labs(fill="GDD5")+
     theme_bw()+
     ggtitle("GDD5 1961-1990")+
@@ -869,11 +942,12 @@ ggsave(p4, file=paste0(dirFigs,"GDD5_reference_period.png"), width=10, height=10
 # plot GDD5 change per GCM/RCP
 
 # calculate GDD5 change per GCM
-dfGDD5Future <- dfPredictions %>% 
-  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
-  dplyr::select(c("GridID","GDD5Future","GCM","RCP")) %>% 
-  pivot_wider(id_cols = c("GridID","RCP"), 
-              names_from = GCM, values_from = "GDD5Future")
+dfGDD5Future <- dfMeans %>% #dfPredictions %>% 
+  #filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  #dplyr::select(c("GridID","GDD5Future","GCM","RCP")) %>% 
+  dplyr::select(c("GridID","GDD5Future","RCP")) %>% 
+  pivot_wider(id_cols = c("GridID"), 
+              names_from = RCP, values_from = "GDD5Future")
 
 # re-join to lat-long using gridID
 dfReference
@@ -881,14 +955,19 @@ dfCoords <- dfReference[,c(1:3,6)] # AND reference GDD5
 
 dfGDD5Future <- merge(dfCoords,dfGDD5Future,by = "GridID")
 
-dfGDD5Future <- dfGDD5Future %>% mutate(bcDiff = `bc - BCC-CSM1-1` - GDD5Current,
-                        heDiff = `he - HadGEM2-ES` - GDD5Current,
-                        mgDiff = `mg - MRI-CGCM3` - GDD5Current,
-                        miDiff = `mi - MIROC-ESM-CHEM` - GDD5Current,
-                        noDiff = `no - NorESM1-M` - GDD5Current)
+dfGDD5Future <- dfGDD5Future %>% 
+  mutate(rcp26diff = `2.6` - GDD5Current,
+         rcp45diff = `4.5` - GDD5Current,
+         rcp60diff = `6.0` - GDD5Current,
+         rcp85diff = `8.5` - GDD5Current,)
+  # mutate(bcDiff = `bc - BCC-CSM1-1` - GDD5Current,
+  #        heDiff = `he - HadGEM2-ES` - GDD5Current,
+  #        mgDiff = `mg - MRI-CGCM3` - GDD5Current,
+  #        miDiff = `mi - MIROC-ESM-CHEM` - GDD5Current,
+  #        noDiff = `no - NorESM1-M` - GDD5Current)
 
 # then plot
-lstRCP <- c("2.6","6.0","4.5","8.5")
+#lstRCP <- c("2.6","6.0","4.5","8.5")
 
 # load country outlines
 worldmap <- ne_countries(scale = 'medium', type = 'map_units',
@@ -896,18 +975,19 @@ worldmap <- ne_countries(scale = 'medium', type = 'map_units',
 nordic <- worldmap[worldmap$name %in% c('Norway','Sweden','Finland')==TRUE,]
 nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
-for (rcp in lstRCP){
+#for (rcp in lstRCP){
   
   #rcp <- lstRCP[1]
   
-  rcp.name <- paste0("RCP",rcp)
-  rcp.grep <- str_replace_all(rcp, "[.]","")
+  #rcp.name <- paste0("RCP",rcp)
+  #rcp.grep <- str_replace_all(rcp, "[.]","")
   
-  dfFilter <- dfGDD5Future %>% 
-    filter(RCP == rcp)
+  #dfFilter <- dfGDD5Future %>% 
+    #filter(RCP == rcp)
   
   # convert to spatial
-  spP <- dfFilter
+  #spP <- dfFilter
+  spP <- dfGDD5Future
   #rm(dfFilter)
   coordinates(spP) <- ~ CenterLong + CenterLat
   
@@ -919,16 +999,19 @@ for (rcp in lstRCP){
   
   rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
   
-  for (var in names(spP)[c(9:13)]){
+  for (var in names(spP)[c(7:10)]){
     
-    #var <- names(spP)[9]
+    #var <- names(spP)[7]
     
-    gcm.name <- ifelse(grepl("bc", var), 'bc - BCC-CSM1-1',
-                       ifelse(grepl("he", var), 'he - HadGEM2-ES',
-                              ifelse(grepl("mg", var), 'mg - MRI-CGCM3',
-                                     ifelse(grepl("mi", var), 'mi - MIROC-ESM-CHEM',
-                                            ifelse(grepl("no", var), 'no - NorESM1-M',
-                                                   ifelse(grepl("MEAN", var), "Ensemble", NA))))))
+    rcp.name <- ifelse(grepl("26", var), 'RCP2.6', 
+                       ifelse(grepl("45", var), 'RCP4.5', 
+                              ifelse(grepl("60", var), 'RCP6.0', 
+                                     ifelse(grepl("85", var), 'RCP8.5', 'Reference'))))
+    
+    letter <- ifelse(grepl("26", var), 'A.', 
+                     ifelse(grepl("45", var), 'B.', 
+                            ifelse(grepl("60", var), 'C.', 
+                                   ifelse(grepl("85", var), 'D.', ''))))
     
     # rasterise 
     rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
@@ -942,12 +1025,16 @@ for (rcp in lstRCP){
     
     (p5 <- ggplot(data = dfGDD5) +
         geom_tile(data = dfGDD5 %>% filter(!is.na(GDD5change)), mapping = aes(x = x, y = y, fill = GDD5change), size = 1) +
-        scale_fill_viridis(option = "inferno", limits = c(0,2000))+
+        scale_fill_viridis(option = "magma", limits = c(0,2000))+
         theme_bw()+
-        ggtitle(gcm.name)+
-        #labs(fill="GDD5 change from baseline")+
+        ggtitle(letter,
+                subtitle = rcp.name)+
+        #labs(fill="GDD5 change")+
         xlab("Longitude")+ylab("Latitude")+
-        theme(plot.title = element_text(face="bold",size=22),
+        theme(plot.title = element_text(size=20, face="bold"),
+              plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
+              axis.title = element_text(size=16),
+              axis.text = element_text(size=14),
               #axis.title = element_blank(),
               #axis.text = element_blank(),
               #axis.ticks = element_blank(),
@@ -955,11 +1042,11 @@ for (rcp in lstRCP){
               #legend.text = element_text(size = 14)))
               legend.position = "none"))
     
-    ggsave(p5, file=paste0(dirFigs,"GDD5change_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
+    ggsave(p5, file=paste0(dirFigs,"GDD5change_",rcp.name,".png"), width=8, height=10, dpi=300)
     
   }
   
-}
+#}
 
 # get legend
 # in loop, i've commented out the bits that plot the legend, but i ran once with the legend included & then extracted & saved
@@ -972,6 +1059,26 @@ legend <- get_legend(p5)
 legend <- as_ggplot(legend)
 plot(legend)
 ggsave(legend, file=paste0(dirFigs,"GDD5_legend.png"),width=4, height=6, dpi=300)
+
+
+### arrange mean RCP plots in single figure ------------------------------------
+
+library(grid)
+library(png)
+library(gridExtra)
+
+lstPlots <- list.files(paste0(dirFigs), full.names = T)
+lstPlots <- grep("GDD5change", lstPlots, value=TRUE)
+lstPlots <- lstPlots[c(1,7,13,19)]
+lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+
+r <- lapply(lstPlots, png::readPNG)
+g <- lapply(r, grid::rasterGrob)
+(c <- gridExtra::grid.arrange(grobs=g, 
+                              ncol=3,
+                              layout_matrix = cbind(c(1,3), c(2,4), c(5,5))))
+
+ggsave(c, file=paste0(dirFigs,"Mean_GDD5_change_per_RCP.png"),width=16, height=15, dpi=300)
 
 
 ### arrange in single figure per RCP ------------------------------------
