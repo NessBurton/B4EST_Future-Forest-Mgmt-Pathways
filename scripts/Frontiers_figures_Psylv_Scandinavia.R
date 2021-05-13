@@ -173,10 +173,10 @@ utm <- crs(shpSZ)
                               ifelse(grepl("6.0", var), 'RCP6.0', 
                                      ifelse(grepl("8.5", var), 'RCP8.5', 'Reference'))))
     
-    letter <- ifelse(grepl("2.6", var), 'A.', 
-                        ifelse(grepl("4.5", var), 'B.', 
-                               ifelse(grepl("6.0", var), 'C.', 
-                                      ifelse(grepl("8.5", var), 'D.', ''))))
+    letter <- ifelse(grepl("2.6", var), '(A)', 
+                        ifelse(grepl("4.5", var), '(B)', 
+                               ifelse(grepl("6.0", var), '(C)', 
+                                      ifelse(grepl("8.5", var), '(D)', ''))))
     
     # rasterise 
     rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
@@ -201,11 +201,8 @@ utm <- crs(shpSZ)
         xlab("Longitude")+ylab("Latitude")+
         theme(plot.title = element_text(size=20, face="bold"),
               plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
-              axis.title = element_text(size=16),
-              axis.text = element_text(size=14),
-              #axis.title = element_blank(),
-              #axis.text = element_blank(),
-              #axis.ticks = element_blank(),
+              axis.title = element_text(size=20),
+              axis.text = element_text(size=18),
               #legend.title = element_text(size = 16, face = "bold", vjust = 3),
               #legend.text = element_text(size = 14)))
               legend.position = "none"))
@@ -490,19 +487,19 @@ for (i in pathList){
   print(paste0("Processing for scenario: ",scenario))
   
   # new vars with reference period height
-  dfFilter$RefHeightMinLat <- dfReference$PrHeightMinLat
+  #dfFilter$RefHeightMinLat <- dfReference$PrHeightMinLat
   dfFilter$RefHeightMeanLat <- dfReference$PrHeightMeanLat
-  dfFilter$RefHeightMaxLat <- dfReference$PrHeightMaxLat
+  #dfFilter$RefHeightMaxLat <- dfReference$PrHeightMaxLat
   
   # per min/mean/max prediction
   # create reclass field & threshold field
-  dfFilter$PrHeightMinLatRC <- NA
-  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat >= dfFilter$RefHeightMinLat)] <- 1 # above mean = 1
-  dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat < dfFilter$RefHeightMinLat)] <- -1 # below mean = -1
-  
-  dfFilter$MinThresh <- NA
-  dfFilter$MinThresh[which(dfFilter$CenterLat < 52.6 | dfFilter$CenterLat > 62.6)] <- 1 # beyond threshold = 1
-  dfFilter$MinThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
+  # dfFilter$PrHeightMinLatRC <- NA
+  # dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat >= dfFilter$RefHeightMinLat)] <- 1 # above mean = 1
+  # dfFilter$PrHeightMinLatRC[which(dfFilter$PrHeightMinLat < dfFilter$RefHeightMinLat)] <- -1 # below mean = -1
+  # 
+  # dfFilter$MinThresh <- NA
+  # dfFilter$MinThresh[which(dfFilter$CenterLat < 52.6 | dfFilter$CenterLat > 62.6)] <- 1 # beyond threshold = 1
+  # dfFilter$MinThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
   
   dfFilter$PrHeightMeanLatRC <- NA
   dfFilter$PrHeightMeanLatRC[which(dfFilter$PrHeightMeanLat >= dfFilter$RefHeightMeanLat)] <- 1
@@ -512,54 +509,62 @@ for (i in pathList){
   dfFilter$MeanThresh[which(dfFilter$CenterLat < 59.87 | dfFilter$CenterLat > 69.87)] <- 1
   dfFilter$MeanThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
   
-  dfFilter$PrHeightMaxLatRC <- NA
-  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat >= dfFilter$RefHeightMaxLat)] <- 1
-  dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat < dfFilter$RefHeightMaxLat)] <- -1
-  
-  dfFilter$MaxThresh <- NA
-  dfFilter$MaxThresh[which(dfFilter$CenterLat < 64.77 | dfFilter$CenterLat > 74.77)] <- 1
-  dfFilter$MaxThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
+  # dfFilter$PrHeightMaxLatRC <- NA
+  # dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat >= dfFilter$RefHeightMaxLat)] <- 1
+  # dfFilter$PrHeightMaxLatRC[which(dfFilter$PrHeightMaxLat < dfFilter$RefHeightMaxLat)] <- -1
+  # 
+  # dfFilter$MaxThresh <- NA
+  # dfFilter$MaxThresh[which(dfFilter$CenterLat < 64.77 | dfFilter$CenterLat > 74.77)] <- 1
+  # dfFilter$MaxThresh[which(dfFilter$GDD5Future < 527 | dfFilter$GDD5Future > 1349)] <- 1
   
   # convert to spatial
   spP <- dfFilter
-  rm(dfFilter)
+  #rm(dfFilter)
   coordinates(spP) <- ~ CenterLong + CenterLat
   
   # define lat long crs
   proj4string(spP) <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
   
   # transform points to utm
-  spP <- spTransform(spP, CRSobj = utm)
+  #spP <- spTransform(spP, CRSobj = utm)
+  spP <- spTransform(spP, CRSobj = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
   
-  rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  #rstUTM <- raster(crs = crs(spP), resolution = c(1100,1100), ext = extent(spP))
+  rstWGS <- raster(crs = crs(spP), resolution = c(0.05,0.05), ext = extent(spP))
   
   # rasterise reclass
-  for (var in names(spP)[c(16,18,20)]){ # rasterise performance for 3 reclassed predictions
+  #for (var in names(spP)[c(16,18,20)]){ # rasterise performance for 3 reclassed predictions
     
     #var <- names(spP)[14]
-    print(paste0("Rasterising for var = ", var))
+    #print(paste0("Rasterising for var = ", var))
     
-    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    #rst <- rasterize(spP, rstWGS, spP$PrHeightMeanLatRC, fun=max, na.rm=TRUE) 
     
-    writeRaster(rst, paste0(dirOut,"pred_rsts/",var,"_Nordic_",scenario,"_GCMagreement.tif"), overwrite=TRUE)
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    #rstRP <- projectRaster(rst, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
     
-    print(paste0("Written raster for: ", var))
+    #writeRaster(rst, paste0(dirOut,"pred_rsts/PrHeightMeanLatRC_Nordic_",scenario,"_GCMagreement2.tif"), overwrite=TRUE)
     
-  }
+    #print(paste0("Written raster for: ", var))
+    
+  #}
   
   # rasterise thresholds
-  for (var in names(spP)[c(17,19,21)]){ # rasterise performance for 3 thresholds
+  #for (var in names(spP)[c(17,19,21)]){ # rasterise performance for 3 thresholds
     
     #var <- names(spP)[9]
-    print(paste0("Rasterising for var = ", var))
+    #print(paste0("Rasterising for var = ", var))
     
-    rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
+    rst <- rasterize(spP, rstWGS, spP$MeanThresh, fun=max, na.rm=TRUE) 
     
-    writeRaster(rst, paste0(dirOut,"pred_rsts/",var,"_Nordic_",scenario,"_modelThresholds.tif"), overwrite=TRUE)
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    #rstRP <- projectRaster(rst, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
     
-    print(paste0("Written raster for: ", var))
+    writeRaster(rst, paste0(dirOut,"pred_rsts/MeanThresh_Nordic_",scenario,"_modelThresholds2.tif"), overwrite=TRUE)
     
-  }
+    #print(paste0("Written raster for: ", var))
+    
+  #}
   
   
 }
@@ -574,13 +579,13 @@ rsts <-  list.files(paste0(dirOut, "pred_rsts/"),pattern = "*.tif", full.names =
 rsts <- grep("bc|mg|mi|no|he", rsts, value=TRUE)
 
 # list reclassed rasters (agreement above or below mean)
-rstsAg <- grep("GCMagreement", rsts, value=TRUE)
+rstsAg <- grep("GCMagreement2", rsts, value=TRUE)
 # list reclassed rasters (beyond model thresholds)
-rstsTh <- grep("modelThresholds", rsts, value=TRUE)
+rstsTh <- grep("modelThresholds2", rsts, value=TRUE)
 
 lstRCP <- c("26in70","60in70","45in70","85in70")
 
-lstProv <- c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
+lstProv <- "PrHeightMeanLat"#c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")
 
 #viridis(11); plasma(11)
 #display.brewer.pal(8, "Greys"); brewer.pal(8, "Greys")
@@ -597,20 +602,29 @@ for (rcp in lstRCP){
                             ifelse(grepl("60in70", rcp), 'RCP6.0',
                                    ifelse(grepl("85in70", rcp), 'RCP8.5', NA))))
   
-  for (prov in lstProv){
+  letter <- ifelse(grepl("26", rcp), '(A)', 
+                   ifelse(grepl("45", rcp), '(B)', 
+                          ifelse(grepl("60", rcp), '(C)', 
+                                 ifelse(grepl("85", rcp), '(D)', ''))))
+  
+  #for (prov in lstProv){
     
-    #prov <- lstProv[1]
+    prov <- lstProv[1]
     
     # filter to provenance
     rstsProv1 <- grep(prov, rstsRCP1, value=TRUE)
     # need to add ifelse for mean/min/max
     ifelse(grepl("Min", prov), rstsProv2 <- grep("Min", rstsRCP2, value=TRUE),
-           ifelse(grepl("Mean", prov), rstsProv2 <- grep("Mean", rstsRCP2, value=TRUE),
-                  ifelse(grepl("Max", prov), rstsProv2 <- grep("Max", rstsRCP2, value=TRUE))))
+            ifelse(grepl("Mean", prov), rstsProv2 <- grep("Mean", rstsRCP2, value=TRUE),
+                   ifelse(grepl("Max", prov), rstsProv2 <- grep("Max", rstsRCP2, value=TRUE))))
       
     # raster stack
     rclassStack1 <- stack(rstsProv1) # agreement
     rclassStack2 <- stack(rstsProv2) # thresholds
+    
+    # reproject to lat long (so plotted in same projection as med region for figures)
+    #rclassStack1rp <- projectRaster(rclassStack1, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+    #rclassStack2rp <- projectRaster(rclassStack2, crs=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
     print("Provenance results per RCP/GCM read in as stack")
     
@@ -634,35 +648,36 @@ for (rcp in lstRCP){
     df2$binary[which(df2$Threshold>=3)]<-"on"
     df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
     
-    (p2 <- ggplot(data = df1) + 
-        geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 1) +
-        #scale_fill_gradientn(colours = cols1)+
+    
+
+    (p2 <- ggplot(data=df1) + 
+        #geom_sf(data = nordic)+
+        geom_tile(data = df1 %>% filter(!is.na(GCMagree)), mapping = aes(x = x, y = y, fill = GCMagree), size = 0.01) +
         scale_fill_gradient2("Above reference mean", limits = c(-5, 5), n.breaks = 3,
                              labels = c("Very unlikely","Possible","Very likely"),
                              low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
         #labs(fill="GCM agreement")+
         new_scale("fill") +
-        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.5) +
+        geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 0.01, alpha=0.5) +
         scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
-        #scale_fill_gradient2("Beyond model thresholds", limits = c(0, 5), n.breaks = 3,
-        #labels = c("Possible", "Likely", "Very likely"),
-        #low = "#FFFFFF", mid = "#D9D9D9" , high = "#969696")+
         theme_bw()+
-        ggtitle(rcp.name)+
+        ggtitle(letter,
+                subtitle = rcp.name)+
+        #labs(fill="Height change (cm)")+
         xlab("Longitude")+ylab("Latitude")+
-        theme(plot.title = element_text(face="bold",size=22),
-              #axis.title = element_blank(),
-              #axis.text = element_blank(),
-              #axis.ticks = element_blank(),
-              #legend.title = element_text(size = 18, face = "bold", vjust = 3),
-              #legend.text = element_text(size = 16)))
+        theme(plot.title = element_text(size=20, face="bold"),
+              plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
+              axis.title = element_text(size=20),
+              axis.text = element_text(size=18),
+              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              #legend.text = element_text(size = 14)))
               legend.position = "none"))
     
     ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=8, height=10, dpi=300)
     
-    print(paste0("Plot saved for provenance: ",prov))
+    #print(paste0("Plot saved for provenance: ",prov))
     
-  }
+  #}
   
   print(paste0("Plots complete for RCP: ", rcp))
   
@@ -768,6 +783,11 @@ for (rcp in lstRCP){
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
   
+  letter <- ifelse(grepl("2.6", rcp), '(A)', 
+                   ifelse(grepl("4.5", rcp), '(B)', 
+                          ifelse(grepl("6.0", rcp), '(C)', 
+                                 ifelse(grepl("8.5", rcp), '(D)', ''))))
+  
   dfFilter <- dfCoV_spatial %>% 
     filter(RCP == rcp)
   
@@ -813,12 +833,6 @@ for (rcp in lstRCP){
   df2$binary[which(df2$Threshold<3 | is.na(df2$Threshold))] <- "off"
   
   (p3 <- ggplot(data = dfCV) +
-      #geom_sf(data = nordic, fill=NA)+
-      #geom_tile(data = dfCV %>% filter(!is.na(CoV)), mapping = aes(x = x, y = y, fill = CoV), size = 1) +
-      #scale_fill_viridis(limits = c(0,100), 
-                         #breaks = c(0,25,50,75,100), 
-                         #labels = c(0,25,50,75,100),
-                         #option = "plasma")+
       geom_tile(data = dfCV %>% filter(!is.na(CoV_discrete)), mapping = aes(x = x, y = y, fill = CoV_discrete), size = 1) +
       scale_fill_viridis(option = "plasma", 
                          discrete = T,
@@ -828,12 +842,13 @@ for (rcp in lstRCP){
       geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 1, alpha=0.5) +
       scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
       theme_bw()+
-      ggtitle(rcp.name)+
+      ggtitle(letter,
+              subtitle = rcp.name)+
       xlab("Longitude")+ylab("Latitude")+
-      theme(plot.title = element_text(face="bold",size=22),
-            #axis.title = element_blank(),
-            #axis.text = element_blank(),
-            #axis.ticks = element_blank(),
+      theme(plot.title = element_text(size=20, face="bold"),
+            plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
+            axis.title = element_text(size=20),
+            axis.text = element_text(size=18),
             #legend.title = element_text(size = 16, face = "bold", vjust = 3),
             #legend.text = element_text(size = 14)))
             legend.position = "none"))
@@ -928,13 +943,13 @@ colnames(dfGDD5) <- c("x","y","GDD5")
     theme_bw()+
     ggtitle("GDD5 1961-1990")+
     xlab("Longitude")+ylab("Latitude")+
-    theme(plot.title = element_text(face="bold",size=22),
-          #axis.title = element_blank(),
-          #axis.text = element_blank(),
-          #axis.ticks = element_blank(),
-          legend.title = element_text(size = 16, face = "bold", vjust = 3),
-          legend.text = element_text(size = 14)))
-          #legend.position = "none"))
+    theme(plot.title = element_text(size=20, face="bold"),
+          plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
+          axis.title = element_text(size=20),
+          axis.text = element_text(size=18),
+          #legend.title = element_text(size = 16, face = "bold", vjust = 3),
+          #legend.text = element_text(size = 14)))
+          legend.position = "none"))
 
 ggsave(p4, file=paste0(dirFigs,"GDD5_reference_period.png"), width=10, height=10, dpi=300)
 
@@ -1008,10 +1023,10 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
                               ifelse(grepl("60", var), 'RCP6.0', 
                                      ifelse(grepl("85", var), 'RCP8.5', 'Reference'))))
     
-    letter <- ifelse(grepl("26", var), 'A.', 
-                     ifelse(grepl("45", var), 'B.', 
-                            ifelse(grepl("60", var), 'C.', 
-                                   ifelse(grepl("85", var), 'D.', ''))))
+    letter <- ifelse(grepl("26", var), '(A)', 
+                     ifelse(grepl("45", var), '(B)', 
+                            ifelse(grepl("60", var), '(C)', 
+                                   ifelse(grepl("85", var), '(D)', ''))))
     
     # rasterise 
     rst <- rasterize(spP, rstUTM, spP[[var]], fun=max, na.rm=TRUE) 
@@ -1033,11 +1048,8 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
         xlab("Longitude")+ylab("Latitude")+
         theme(plot.title = element_text(size=20, face="bold"),
               plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
-              axis.title = element_text(size=16),
-              axis.text = element_text(size=14),
-              #axis.title = element_blank(),
-              #axis.text = element_blank(),
-              #axis.ticks = element_blank(),
+              axis.title = element_text(size=20),
+              axis.text = element_text(size=18),
               #legend.title = element_text(size = 16, face = "bold", vjust = 3),
               #legend.text = element_text(size = 14)))
               legend.position = "none"))

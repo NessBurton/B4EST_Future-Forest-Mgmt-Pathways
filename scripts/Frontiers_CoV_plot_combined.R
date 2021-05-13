@@ -127,8 +127,9 @@ summary(dfCoV)
     ggplot()+
     geom_boxplot(aes(RCP, CoV_mean,fill=RCP))+
     scale_fill_brewer(palette = "Dark2")+
-    ylim(0,40)+ylab("CoV (%)")+
-    facet_grid(region~thresholds)+
+    #ylim(0,40)+ 
+    ylab("CoV (%)")+
+    facet_grid(region~thresholds,scales = "free")+
     theme_bw()+
     theme(axis.title.x = element_blank(), 
           axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
@@ -138,6 +139,17 @@ summary(dfCoV)
           legend.title = element_text(size = 16, face = "bold"),
           legend.text = element_text(size = 14),
           strip.text = element_text(face="bold", size = 14)))
+
+library(gtable)
+g <- ggplotGrob(CV)
+strips <- g$layout[grep("strip_t", g$layout$name), ]
+titles <- lapply(paste0("(", letters[seq_len(nrow(strips))], ")"), 
+                 textGrob, x = 0, hjust = 0, vjust = 1)
+g <- gtable_add_grob(g, grobs = titles, 
+                     t = strips$t, b = strips$b - 2, 
+                     l = strips$l, r = strips$r)
+grid.newpage()
+grid.draw(g)
 
 ggsave(CV, file=paste0(dirFigs, "CoV_Nordic_&_Spain_comparison.png"), width=12, height=10, dpi=300)
 
