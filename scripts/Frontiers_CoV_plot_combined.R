@@ -142,7 +142,7 @@ summary(dfCoV)
 
 library(gtable)
 g <- ggplotGrob(CV)
-strips <- g$layout[grep("strip_t", g$layout$name), ]
+strips <- g$layout[grep("strip-t", g$layout$name), ]
 titles <- lapply(paste0("(", letters[seq_len(nrow(strips))], ")"), 
                  textGrob, x = 0, hjust = 0, vjust = 1)
 g <- gtable_add_grob(g, grobs = titles, 
