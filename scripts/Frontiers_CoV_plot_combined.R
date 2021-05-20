@@ -132,24 +132,24 @@ summary(dfCoV)
     facet_grid(region~thresholds,scales = "free")+
     theme_bw()+
     theme(axis.title.x = element_blank(), 
-          axis.title.y = element_text(size = 18, face = "bold", margin = margin(r = 15)),
+          axis.title.y = element_text(size = 20, face = "bold", margin = margin(r = 15)),
           axis.text.x = element_blank(),
-          axis.text.y = element_text(size = 12),
+          axis.text.y = element_text(size = 18),
           axis.ticks.x = element_blank(),
-          legend.title = element_text(size = 16, face = "bold"),
-          legend.text = element_text(size = 14),
-          strip.text = element_text(face="bold", size = 14)))
+          legend.title = element_text(size = 20, face = "bold"),
+          legend.text = element_text(size = 18),
+          strip.text = element_text(face="bold", size = 20)))
 
-library(gtable)
-g <- ggplotGrob(CV)
-strips <- g$layout[grep("strip-t", g$layout$name), ]
-titles <- lapply(paste0("(", letters[seq_len(nrow(strips))], ")"), 
-                 textGrob, x = 0, hjust = 0, vjust = 1)
-g <- gtable_add_grob(g, grobs = titles, 
-                     t = strips$t, b = strips$b - 2, 
-                     l = strips$l, r = strips$r)
-grid.newpage()
-grid.draw(g)
+# library(gtable)
+# g <- ggplotGrob(CV)
+# strips <- g$layout[grep("strip-t", g$layout$name), ]
+# titles <- lapply(paste0("(", letters[seq_len(nrow(strips))], ")"), 
+#                  textGrob, x = 0, hjust = 0, vjust = 1)
+# g <- gtable_add_grob(g, grobs = titles, 
+#                      t = strips$t, b = strips$b - 2, 
+#                      l = strips$l, r = strips$r)
+# grid.newpage()
+# grid.draw(g)
 
 ggsave(CV, file=paste0(dirFigs, "CoV_Nordic_&_Spain_comparison.png"), width=12, height=10, dpi=300)
 
