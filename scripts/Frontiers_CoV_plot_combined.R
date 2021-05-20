@@ -58,15 +58,21 @@ dfRandom <- bind_rows(replicate(100, dfPredictions %>% sample_n(1000), simplify=
 
 # reference mean
 dfReference <- vroom(files[25])
-meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
+dfReference <- dfReference[,c("GridID","PrHeightMeanLat")]
+colnames(dfReference) <- c("GridID","RefHeightMeanLat")
+#meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
+
+dfRandom <- left_join(dfRandom,dfReference, by="GridID")
+
 
 # all data
 dfNordicAll <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
-  mutate(RCP.mean = PrHeightMeanLat - meanLatMean,
+  mutate(sample.mean = mean(RefHeightMeanLat),
+         RCP.mean = PrHeightMeanLat - sample.mean,
          RCP.sq = RCP.mean ^ 2) %>% 
   # manually calc sd from reference mean
-  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/1000)) %>%  
+  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
   mutate(CoV_mean = GCM.sd/meanLatMean*100)
 
 head(dfNordicAll)
@@ -76,10 +82,11 @@ dfNordicAll$thresholds <- "All data"
 # with data beyond model limits removed
 dfNordicLim <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
-  mutate(RCP.mean = PrHeightMeanLatT - meanLatMean,
+  mutate(sample.mean = mean(RefHeightMeanLat),
+         RCP.mean = PrHeightMeanLatT - sample.mean,
          RCP.sq = RCP.mean ^ 2) %>% 
   # manually calc sd from reference mean
-  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/1000)) %>%  
+  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
   mutate(CoV_mean = GCM.sd/meanLatMean*100)
 
 head(dfNordicLim)
