@@ -478,7 +478,7 @@ utm <- crs(shpSZ)
 
 for (i in pathList){
   
-  #i <- pathList[1]
+  i <- pathList[1]
   dfFilter <- dfPredictions %>% filter(path == i)
   
   file <- stringr::str_split(i, fixed("_"))[[1]][1]
@@ -592,7 +592,7 @@ lstProv <- "PrHeightMeanLat"#c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLa
 
 for (rcp in lstRCP){
   
-  #rcp <- lstRCP[1]
+  rcp <- lstRCP[1]
   
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
