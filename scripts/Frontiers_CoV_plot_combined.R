@@ -70,34 +70,44 @@ dfNordicAll <- dfRandom %>%
   group_by(RCP,GCM,Obs) %>% 
   mutate(sample.mean = mean(RefHeightMeanLat),
          RCP.mean = PrHeightMeanLat - sample.mean,
-         RCP.sq = RCP.mean ^ 2) %>% 
+         RCP.sq = RCP.mean ^ 2,
+         GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999),
+         CoV_mean = GCM.sd/sample.mean*100) #%>% 
   # manually calc sd from reference mean
-  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
-  mutate(CoV_mean = GCM.sd/meanLatMean*100)
+  #summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
+  #mutate(CoV_mean = GCM.sd/sample.mean*100)
 
 head(dfNordicAll)
 dfNordicAll$region <- "Nordic"
 dfNordicAll$thresholds <- "All data"
+
+write.csv(dfNordicAll,paste0(dirData, "dfNordic_CoV_allData.csv"),row.names = F)
+
 
 # with data beyond model limits removed
 dfNordicLim <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
   mutate(sample.mean = mean(RefHeightMeanLat),
          RCP.mean = PrHeightMeanLatT - sample.mean,
-         RCP.sq = RCP.mean ^ 2) %>% 
+         RCP.sq = RCP.mean ^ 2,
+         GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999),
+         CoV_mean = GCM.sd/sample.mean*100) #%>% 
   # manually calc sd from reference mean
-  summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
-  mutate(CoV_mean = GCM.sd/meanLatMean*100)
+  #summarise(GCM.sd = sqrt(sum(RCP.sq, na.rm = T)/999)) %>%  
+  #mutate(CoV_mean = GCM.sd/sample.mean*100)
 
 head(dfNordicLim)
 dfNordicLim$region <- "Nordic"
 dfNordicLim$thresholds <- "Model limits applied"
 
+write.csv(dfNordicLim,paste0(dirData, "dfNordic_CoV_lims.csv"),row.names = F)
+
+
 
 ### Spanish data ---------------------------------------------------------------
 
 # all data
-dfSpainAll <- vroom(paste0(dirData, "dfRCP2_CoV_allData.csv"))
+dfSpainAll <- vroom(paste0(dirData, "dfRCP2_CoV_allData_2.csv"))
 head(dfSpainAll)
 dfSpainAll$region <- "Spain"
 dfSpainAll$thresholds <- "All data"
@@ -106,7 +116,7 @@ unique(dfSpainAll$RCP)
 dfSpainAll$RCP[which(dfSpainAll$RCP=="6")] <- "6.0"
 
 # with data beyond model limits removed
-dfSpainLim <- vroom(paste0(dirData, "dfRCP_CoV_Thresholds.csv"))
+dfSpainLim <- vroom(paste0(dirData, "dfRCP_CoV_Thresholds_2.csv"))
 head(dfSpainLim)
 dfSpainLim$region <- "Spain"
 dfSpainLim$thresholds <- "Model limits applied"
