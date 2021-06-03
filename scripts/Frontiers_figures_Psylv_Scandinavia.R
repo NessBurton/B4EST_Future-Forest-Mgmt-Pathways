@@ -41,7 +41,7 @@ dfPredictions <- vroom(files2, id="path")
 
 names(dfPredictions)
 
-dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong","Country",
+dfPredictions <- dfPredictions[,c("path","GridID","CenterLat","CenterLong","Country","GridAlt",
                                   "GDD5Future","PrHeightLocal",
                                   "PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLat")]
 
@@ -742,6 +742,74 @@ gl3 <- lapply(rl3, grid::rasterGrob)
 ggsave(c3, file=paste0(dirFigs,"PrHeightMaxLat_Combined.png"),width=14, height=12, dpi=300)
 
 
+### CoV values for manuscript --------------------------------------------------
+
+library(matrixStats) # for rowSds
+
+head(dfPredictions)
+names(dfPredictions)
+
+#dfReference$PrHeightMeanLat[which(dfReference$CenterLat < 59.87 | dfReference$CenterLat > 69.87)] <- NA
+#dfReference$PrHeightMeanLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
+
+
+dfCoV <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","CenterLong","CenterLat","GDD5Future","PrHeightMeanLat","GCM","RCP")) %>% 
+  mutate(modelLims = ifelse(CenterLat < 59.87, 1,
+                            ifelse(CenterLat > 69.87, 1,
+                                   ifelse(GDD5Future < 527, 1,
+                                          ifelse(GDD5Future > 1349, 1, NA))))) %>% 
+  filter(is.na(modelLims)) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "PrHeightMeanLat") %>%
+  mutate(rMean = rowMeans(.[3:7], na.rm = TRUE),
+         rSD = rowSds(as.matrix(.[3:7]), na.rm = TRUE),
+         CoV = rSD/rMean*100)
+
+summary(dfCoV$CoV)
+
+# below 57 lat
+dfCoV <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","CenterLong","CenterLat","GDD5Future","PrHeightMeanLat","GCM","RCP")) %>% 
+  filter(CenterLat < 57) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "PrHeightMeanLat") %>%
+  mutate(rMean = rowMeans(.[3:7], na.rm = TRUE),
+         rSD = rowSds(as.matrix(.[3:7]), na.rm = TRUE),
+         CoV = rSD/rMean*100)
+
+summary(dfCoV$CoV)
+
+# lat above 71
+dfCoV <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","CenterLong","CenterLat","GDD5Future","PrHeightMeanLat","GCM","RCP")) %>% 
+  filter(CenterLat >71) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "PrHeightMeanLat") %>%
+  mutate(rMean = rowMeans(.[3:7], na.rm = TRUE),
+         rSD = rowSds(as.matrix(.[3:7]), na.rm = TRUE),
+         CoV = rSD/rMean*100)
+
+summary(dfCoV$CoV)
+
+
+# high altitude
+summary(dfPredictions$GridAlt)
+
+dfCoV <- dfPredictions %>% 
+  filter(grepl("bc|mg|mi|no|he", GCM)) %>% 
+  dplyr::select(c("GridID","GridAlt","GDD5Future","PrHeightMeanLat","GCM","RCP")) %>% 
+  filter(GridAlt > 2000) %>% 
+  pivot_wider(id_cols = c("GridID","RCP"), 
+              names_from = GCM, values_from = "PrHeightMeanLat") %>%
+  mutate(rMean = rowMeans(.[3:7], na.rm = TRUE),
+         rSD = rowSds(as.matrix(.[3:7]), na.rm = TRUE),
+         CoV = rSD/rMean*100)
+
+summary(dfCoV$CoV)
 
 
 ### CoV spatial ----------------------------------------------------------------
@@ -778,7 +846,7 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
 
 for (rcp in lstRCP){
   
-  #rcp <- lstRCP[3]
+  rcp <- lstRCP[3]
   
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
