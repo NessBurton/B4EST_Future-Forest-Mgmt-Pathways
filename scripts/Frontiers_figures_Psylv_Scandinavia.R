@@ -85,7 +85,7 @@ dfReference <- vroom(files[25])
 
 #dfReference$PrHeightMeanLat[which(dfReference$CenterLat < 59.87 | dfReference$CenterLat > 69.87)] <- NA
 #dfReference$PrHeightMeanLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
-#meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
+meanLatMean <- mean(dfReference$PrHeightMeanLat, na.rm = TRUE) # 308.8 cm
 
 #dfReference$PrHeightMaxLat[which(dfReference$CenterLat < 64.77 | dfReference$CenterLat > 74.77)] <- NA
 #dfReference$PrHeightMaxLat[which(dfReference$GDD5Current < 527 | dfReference$GDD5Current > 1349)] <- NA
@@ -197,18 +197,18 @@ utm <- crs(shpSZ)
         theme_bw()+
         ggtitle(letter,
                 subtitle = rcp.name)+
-        #labs(fill="Height change (cm)")+
+        labs(fill="Height change (cm)")+
         xlab("Longitude")+ylab("Latitude")+
         theme(plot.title = element_text(size=20, face="bold"),
               plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
               axis.title = element_text(size=20),
               axis.text = element_text(size=18),
-              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-              #legend.text = element_text(size = 14)))
-              legend.position = "none"))
+              legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              legend.text = element_text(size = 14)))
+              #legend.position = "none"))
     
     #ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",rcp.grep,"_GCM_",var,".png"), width=8, height=10, dpi=300)
-    ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",var,".png"), width=8, height=10, dpi=300)
+    ggsave(p5, file=paste0(dirFigs,"HeightChange_RCP",var,".jpg"), width=5, height=6, dpi=300)
     
     
   }
@@ -225,7 +225,7 @@ legend <- get_legend(p5)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"HeightChange_legend.png"),width=4, height=6, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"HeightChange_legend.jpg"),width=4, height=6, dpi=300)
 
 # histogram
 (h1 <- ggplot(dfPredictions)+
@@ -243,10 +243,11 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("HeightChange", lstPlots, value=TRUE)
-lstPlots <- lstPlots[c(3,9,15,21)]
-lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.png" )
+lstPlots <- grep("jpg", lstPlots, value=TRUE)
+lstPlots <- lstPlots[c(2:5,1)]
+#lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/HeightChange_legend.jpg" )
 
-r <- lapply(lstPlots, png::readPNG)
+r <- lapply(lstPlots, jpeg::readJPEG)
 g <- lapply(r, grid::rasterGrob)
 (c <- gridExtra::grid.arrange(grobs=g, 
                               ncol=3,
@@ -268,7 +269,7 @@ g <- lapply(r, grid::rasterGrob)
 #                 t = strips$t, b = strips$b - 2, 
 #                 l = strips$l, r = strips$r)
 
-ggsave(c, file=paste0(dirFigs,"Mean_height_change_per_RCP.png"),width=16, height=15, dpi=300)
+ggsave(c, file=paste0(dirFigs,"Mean_height_change_per_RCP.jpg"),width=15, height=10, dpi=300)
 
 ### arrange in single figure per RCP -------------------------------------------
 
@@ -400,19 +401,19 @@ ggsave(p1a, file=paste0(dirFigs,"GCM_RCP_PrHeightMeanLat_alldata_Nordic_boxplots
 # first with data beyond thresholds removed
 dfCoV <- dfRandom %>% 
   group_by(RCP,GCM,Obs) %>% 
-  mutate(DiffMin = PrHeightMinLatT - minLatMean,
+  mutate(#DiffMin = PrHeightMinLatT - minLatMean,
          DiffMean = PrHeightMeanLatT - meanLatMean,
-         DiffMax = PrHeightMaxLatT - maxLatMean,
-         sqMin = DiffMin ^ 2,
-         sqMean = DiffMean ^ 2,
-         sqMax = DiffMax ^ 2) %>% 
+         #DiffMax = PrHeightMaxLatT - maxLatMean,
+         #sqMin = DiffMin ^ 2,
+         sqMean = DiffMean ^ 2) %>% #,
+         #sqMax = DiffMax ^ 2) %>% 
   # manually calc sd from reference mean
-  summarise(SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
-            SDmean = sqrt(sum(sqMean, na.rm = T)/1000),
-            SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
-  mutate(CoV_min = SDmin/minLatMean*100,
-         CoV_mean = SDmean/meanLatMean*100,
-         CoV_max = SDmax/maxLatMean*100)
+  summarise(#SDmin = sqrt(sum(sqMin, na.rm = T)/1000),
+            SDmean = sqrt(sum(sqMean, na.rm = T)/1000)) %>% #,
+            #SDmax = sqrt(sum(sqMax, na.rm = T)/1000)) %>%  
+  mutate(#CoV_min = SDmin/minLatMean*100,
+         CoV_mean = SDmean/meanLatMean*100)#,
+         #CoV_max = SDmax/maxLatMean*100)
 
 (CVmean <- dfCoV %>% filter(GCM != "Ensemble") %>% 
     ggplot()+
@@ -592,7 +593,7 @@ lstProv <- "PrHeightMeanLat"#c("PrHeightMinLat","PrHeightMeanLat","PrHeightMaxLa
 
 for (rcp in lstRCP){
   
-  rcp <- lstRCP[1]
+  #rcp <- lstRCP[1]
   
   rstsRCP1 <- grep(rcp, rstsAg, value=TRUE)
   rstsRCP2 <- grep(rcp, rstsTh, value=TRUE)
@@ -656,7 +657,7 @@ for (rcp in lstRCP){
         scale_fill_gradient2("Above reference mean", limits = c(-5, 5), n.breaks = 3,
                              labels = c("Very unlikely","Possible","Very likely"),
                              low = "#FDE725FF", mid = "#21908CFF", high = "#440154FF")+
-        #labs(fill="GCM agreement")+
+        labs(fill="GCM agreement")+
         new_scale("fill") +
         geom_tile(data = df2 %>% filter(!is.na(Threshold)), mapping = aes(x=x,y=y,fill=binary), size = 0.01, alpha=0.5) +
         scale_fill_discrete("Beyond model thresholds", type = c("#969696"), labels = c(""))+
@@ -669,11 +670,11 @@ for (rcp in lstRCP){
               plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
               axis.title = element_text(size=20),
               axis.text = element_text(size=18),
-              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-              #legend.text = element_text(size = 14)))
-              legend.position = "none"))
+              legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              legend.text = element_text(size = 14)))
+              #legend.position = "none"))
     
-    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".png"), width=8, height=10, dpi=300)
+    ggsave(p2, file=paste0(dirFigs,"GCM_agreement_",prov,"_RCP",rcp,".jpg"), width=5, height=6, dpi=300)
     
     #print(paste0("Plot saved for provenance: ",prov))
     
@@ -693,7 +694,7 @@ legend <- get_legend(p2)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.png"),width=4, height=6, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"GCM_agreement_legend.jpg"),width=4, height=6, dpi=300)
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -704,16 +705,17 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots1 <- grep("GCM_agreement", lstPlots, value=TRUE)
-lstPlots1 <- lstPlots1[c(1,6,7,8,9)]
-lstPlots1 <- lstPlots1[c(2,4,3,5,1)] # specific order for plotting
+lstPlots1 <- grep("jpg", lstPlots1, value=TRUE)
+lstPlots1 <- lstPlots1[c(2:5,1)]
+#lstPlots1 <- lstPlots1[c(2,4,3,5,1)] # specific order for plotting
 
-rl <- lapply(lstPlots1, png::readPNG)
+rl <- lapply(lstPlots1, jpeg::readJPEG)
 gl <- lapply(rl, grid::rasterGrob)
 (c1 <- gridExtra::grid.arrange(grobs=gl, 
                                ncol=3,
                                layout_matrix = cbind(c(1,2), c(3,4), c(5,5))))
 
-ggsave(c1, file=paste0(dirFigs,"PrHeightMeanLat_Combined.png"),width=14, height=12, dpi=300)
+ggsave(c1, file=paste0(dirFigs,"PrHeightMeanLat_Combined.jpg"),width=15, height=10, dpi=300)
 
 
 lstPlots2 <- grep("GCM_agreement", lstPlots, value=TRUE)
@@ -846,7 +848,7 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
 
 for (rcp in lstRCP){
   
-  rcp <- lstRCP[3]
+  #rcp <- lstRCP[3]
   
   rcp.name <- paste0("RCP",rcp)
   rcp.grep <- str_replace_all(rcp, "[.]","")
@@ -917,11 +919,11 @@ for (rcp in lstRCP){
             plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
             axis.title = element_text(size=20),
             axis.text = element_text(size=18),
-            #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-            #legend.text = element_text(size = 14)))
-            legend.position = "none"))
+            legend.title = element_text(size = 16, face = "bold", vjust = 3),
+            legend.text = element_text(size = 14)))
+            #legend.position = "none"))
   
-  ggsave(p3, file=paste0(dirFigs,"CoV_spatial_meanProv_RCP",rcp.grep,".png"), width=8, height=10, dpi=300)
+  ggsave(p3, file=paste0(dirFigs,"CoV_spatial_meanProv_RCP",rcp.grep,".jpg"), width=5, height=6, dpi=300)
   
   
 }
@@ -936,7 +938,7 @@ legend <- get_legend(p3)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"CoV_legend.png"),width=4, height=6, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"CoV_legend.jpg"),width=4, height=6, dpi=300)
 
 
 ### arrange in single figure per provenance ------------------------------------
@@ -947,15 +949,16 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("CoV_spatial", lstPlots, value=TRUE)
-lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/CoV_legend.png" )
+lstPlots <- grep("jpg", lstPlots, value=TRUE)
+lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/CoV_legend.jpg" )
 
-r3 <- lapply(lstPlots, png::readPNG)
+r3 <- lapply(lstPlots, jpeg::readJPEG)
 g3 <- lapply(r3, grid::rasterGrob)
 (c3 <- gridExtra::grid.arrange(grobs=g3, 
                                ncol=3,
                                layout_matrix = cbind(c(1,3), c(2,4), c(5,5))))
 
-ggsave(c3, file=paste0(dirFigs,"CoV_per_RCP.png"),width=14, height=12, dpi=300)
+ggsave(c3, file=paste0(dirFigs,"CoV_per_RCP.jpg"),width=15, height=10, dpi=300)
 
 
 ### elevation histogram --------------------------------------------------------
@@ -1112,17 +1115,17 @@ nordic <- nordic %>% st_set_crs(CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no
         theme_bw()+
         ggtitle(letter,
                 subtitle = rcp.name)+
-        #labs(fill="GDD5 change")+
+        labs(fill="GDD5 change")+
         xlab("Longitude")+ylab("Latitude")+
         theme(plot.title = element_text(size=20, face="bold"),
               plot.subtitle = element_text(size=22,hjust=1, vjust=0.5),
               axis.title = element_text(size=20),
               axis.text = element_text(size=18),
-              #legend.title = element_text(size = 16, face = "bold", vjust = 3),
-              #legend.text = element_text(size = 14)))
-              legend.position = "none"))
+              legend.title = element_text(size = 16, face = "bold", vjust = 3),
+              legend.text = element_text(size = 14)))
+              #legend.position = "none"))
     
-    ggsave(p5, file=paste0(dirFigs,"GDD5change_",rcp.name,".png"), width=8, height=10, dpi=300)
+    ggsave(p5, file=paste0(dirFigs,"GDD5change_",rcp.name,".jpg"), width=5, height=6, dpi=300)
     
   }
   
@@ -1138,7 +1141,7 @@ legend <- get_legend(p5)
 # Convert to a ggplot and save
 legend <- as_ggplot(legend)
 plot(legend)
-ggsave(legend, file=paste0(dirFigs,"GDD5_legend.png"),width=4, height=6, dpi=300)
+ggsave(legend, file=paste0(dirFigs,"GDD5_legend.jpg"),width=4, height=6, dpi=300)
 
 
 ### arrange mean RCP plots in single figure ------------------------------------
@@ -1149,16 +1152,17 @@ library(gridExtra)
 
 lstPlots <- list.files(paste0(dirFigs), full.names = T)
 lstPlots <- grep("GDD5change", lstPlots, value=TRUE)
-lstPlots <- lstPlots[c(1,7,13,19)]
-lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.png" )
+lstPlots <- grep("jpg", lstPlots, value=TRUE)
+#lstPlots <- lstPlots[c(1,7,13,19)]
+lstPlots <- append(lstPlots, "C:/Users/vanessa.burton.sb/Documents/FFMPs/Frontiers_figures/GDD5_legend.jpg" )
 
-r <- lapply(lstPlots, png::readPNG)
+r <- lapply(lstPlots, jpeg::readJPEG)
 g <- lapply(r, grid::rasterGrob)
 (c <- gridExtra::grid.arrange(grobs=g, 
                               ncol=3,
                               layout_matrix = cbind(c(1,3), c(2,4), c(5,5))))
 
-ggsave(c, file=paste0(dirFigs,"Mean_GDD5_change_per_RCP.png"),width=16, height=15, dpi=300)
+ggsave(c, file=paste0(dirFigs,"Mean_GDD5_change_per_RCP.jpg"),width=15, height=10, dpi=300)
 
 
 ### arrange in single figure per RCP ------------------------------------

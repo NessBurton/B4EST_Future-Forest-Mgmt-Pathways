@@ -168,5 +168,5 @@ summary(dfCoV)
 # grid.newpage()
 # grid.draw(g)
 
-ggsave(CV, file=paste0(dirFigs, "CoV_Nordic_&_Spain_comparison.png"), width=12, height=10, dpi=300)
+ggsave(CV, file=paste0(dirFigs, "CoV_Nordic_&_Spain_comparison.jpg"), width=12, height=10, dpi=300)
 
