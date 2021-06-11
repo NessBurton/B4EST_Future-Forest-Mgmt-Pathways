@@ -82,7 +82,7 @@ dfNordicAll$region <- "Nordic"
 dfNordicAll$thresholds <- "All data"
 
 write.csv(dfNordicAll,paste0(dirData, "dfNordic_CoV_allData.csv"),row.names = F)
-
+dfNordicAll <- read.csv(paste0(dirData, "dfNordic_CoV_allData.csv"))
 
 # with data beyond model limits removed
 dfNordicLim <- dfRandom %>% 
@@ -101,7 +101,7 @@ dfNordicLim$region <- "Nordic"
 dfNordicLim$thresholds <- "Model limits applied"
 
 write.csv(dfNordicLim,paste0(dirData, "dfNordic_CoV_lims.csv"),row.names = F)
-
+dfNordicLim <- read.csv(paste0(dirData, "dfNordic_CoV_lims.csv"))
 
 
 ### Spanish data ---------------------------------------------------------------
@@ -137,6 +137,11 @@ dfCoV$region <- as.factor(dfCoV$region)
 dfCoV$thresholds <- as.factor(dfCoV$thresholds)
 
 summary(dfCoV)
+dfCoV$RCP[which(dfCoV$RCP=="6")] <- "6.0"
+summary(dfCoV$RCP)
+dfCoV$RCP <- as.factor(dfCoV$RCP)
+dfCoV$RCP <- droplevels(dfCoV$RCP, exclude = "6")
+
 
 ### Coefficient of Variation (CoV) ---------------------------------------------
 
